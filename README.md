@@ -227,7 +227,7 @@ invokes cmake commands as needed.
 * Change to the root of the source code directory, change to the most recent release branch, and build:
 
         cd monero
-        git checkout v0.13.0.4
+        git checkout v0.14.0.0
         make
 
     *Optional*: If your machine has several cores and enough memory, enable
