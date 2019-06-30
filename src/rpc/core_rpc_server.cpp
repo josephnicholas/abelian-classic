@@ -576,6 +576,7 @@ namespace cryptonote
               res.status = "Failed to parse and validate tx from blob";
               return true;
             }
+#ifdef ENABLE_PRUNING
             std::stringstream ss;
             binary_archive<true> ba(ss);
             bool r = const_cast<cryptonote::transaction&>(tx).serialize_base(ba);
@@ -586,6 +587,7 @@ namespace cryptonote
             }
             const cryptonote::blobdata pruned = ss.str();
             sorted_txs.push_back(std::make_tuple(h, pruned, get_transaction_prunable_hash(tx), std::string(i->tx_blob, pruned.size())));
+#endif
             missed_txs.erase(std::find(missed_txs.begin(), missed_txs.end(), h));
             pool_tx_hashes.insert(h);
             const std::string hash_string = epee::string_tools::pod_to_hex(h);
@@ -1442,6 +1444,7 @@ namespace cryptonote
     response.num_txes = blk.tx_hashes.size();
     response.pow_hash = fill_pow_hash ? string_tools::pod_to_hex(get_block_longhash(blk, height)) : "";
     response.long_term_weight = m_core.get_blockchain_storage().get_db().get_block_long_term_weight(height);
+    response.miner_tx_hash = string_tools::pod_to_hex(cryptonote::get_transaction_hash(blk.miner_tx));
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -1531,7 +1534,7 @@ namespace cryptonote
       error_resp.message = "Internal error: can't get last block.";
       return false;
     }
-    const bool restricted = m_restricted;
+    const bool restricted = m_restricted && ctx;
     bool response_filled = fill_block_header_response(last_block, false, last_block_height, last_block_hash, res.block_header, req.fill_pow_hash && !restricted);
     if (!response_filled)
     {
@@ -1574,7 +1577,7 @@ namespace cryptonote
       return false;
     }
     uint64_t block_height = boost::get<txin_gen>(blk.miner_tx.vin.front()).height;
-    const bool restricted = m_restricted;
+    const bool restricted = m_restricted && ctx;
     bool response_filled = fill_block_header_response(blk, orphan, block_height, block_hash, res.block_header, req.fill_pow_hash && !restricted);
     if (!response_filled)
     {
@@ -1625,7 +1628,7 @@ namespace cryptonote
         return false;
       }
       res.headers.push_back(block_header_response());
-      const bool restricted = m_restricted;
+      const bool restricted = m_restricted && ctx;
       bool response_filled = fill_block_header_response(blk, false, block_height, block_hash, res.headers.back(), req.fill_pow_hash && !restricted);
       if (!response_filled)
       {
@@ -1660,7 +1663,7 @@ namespace cryptonote
       error_resp.message = "Internal error: can't get block by height. Height = " + std::to_string(req.height) + '.';
       return false;
     }
-    const bool restricted = m_restricted;
+    const bool restricted = m_restricted && ctx;
     bool response_filled = fill_block_header_response(blk, false, req.height, block_hash, res.block_header, req.fill_pow_hash && !restricted);
     if (!response_filled)
     {
@@ -1716,7 +1719,7 @@ namespace cryptonote
       return false;
     }
     uint64_t block_height = boost::get<txin_gen>(blk.miner_tx.vin.front()).height;
-    const bool restricted = m_restricted;
+    const bool restricted = m_restricted && ctx;
     bool response_filled = fill_block_header_response(blk, orphan, block_height, block_hash, res.block_header, req.fill_pow_hash && !restricted);
     if (!response_filled)
     {
