@@ -11237,7 +11237,7 @@ std::string wallet2::get_reserve_proof(const boost::optional<std::pair<uint32_t,
 
     // determine which tx pub key was used for deriving the output key
     const crypto::public_key *tx_pub_key_used = &tx_pub_key;
-    for (int i = 0; i < 2; ++i)
+    for (auto i = 0; i < 2; ++i)
     {
       proof.shared_secret = rct::rct2pk(rct::scalarmultKey(rct::pk2rct(*tx_pub_key_used), rct::sk2rct(m_account.get_keys().m_view_secret_key)));
       crypto::key_derivation derivation;

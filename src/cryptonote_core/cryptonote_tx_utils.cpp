@@ -259,7 +259,7 @@ namespace cryptonote
             return false;
           }
 
-          std::string extra_nonce;
+          std::string extra_nonce{};
           set_encrypted_payment_id_to_tx_extra_nonce(extra_nonce, payment_id8);
           remove_field_from_tx_extra(tx.extra, typeid(tx_extra_nonce));
           if (!add_extra_nonce_to_tx_extra(tx.extra, extra_nonce))
@@ -390,7 +390,7 @@ namespace cryptonote
     // figure out if we need to make additional tx pubkeys
     size_t num_stdaddresses = 0;
     size_t num_subaddresses = 0;
-    account_public_address single_dest_subaddress;
+    account_public_address single_dest_subaddress{};
     classify_addresses(destinations, change_addr, num_stdaddresses, num_subaddresses, single_dest_subaddress);
 
     // if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
@@ -445,8 +445,8 @@ namespace cryptonote
     if (need_additional_txkeys)
     {
       LOG_PRINT_L2("additional tx pubkeys: ");
-      for (size_t i = 0; i < additional_tx_public_keys.size(); ++i)
-        LOG_PRINT_L2(additional_tx_public_keys[i]);
+      for (const auto & additional_tx_public_key : additional_tx_public_keys)
+        LOG_PRINT_L2(additional_tx_public_key);
       add_additional_tx_pub_keys_to_extra(tx.extra, additional_tx_public_keys);
     }
 
@@ -462,8 +462,10 @@ namespace cryptonote
 
     // check for watch only wallet
     bool zero_secret_key = true;
-    for (size_t i = 0; i < sizeof(sender_account_keys.m_spend_secret_key); ++i)
-      zero_secret_key &= (sender_account_keys.m_spend_secret_key.data[i] == 0);
+    for(char c : sender_account_keys.m_spend_secret_key.data)
+    {
+        zero_secret_key &= (c == 0);
+    }
     if (zero_secret_key)
     {
       MDEBUG("Null secret key, skipping signatures");
@@ -472,12 +474,11 @@ namespace cryptonote
     if (tx.version == 1)
     {
       //generate ring signatures
-      crypto::hash tx_prefix_hash;
+      crypto::hash tx_prefix_hash{};
       get_transaction_prefix_hash(tx, tx_prefix_hash);
 
       std::stringstream ss_ring_s;
       size_t i = 0;
-      bool alreadySigned = false;
       for(const tx_source_entry& src_entr:  sources)
       {
         ss_ring_s << "pub_keys:" << ENDL;
@@ -493,7 +494,6 @@ namespace cryptonote
         tx.signatures.push_back(std::vector<crypto::signature>());
         std::vector<crypto::signature>& sigs = tx.signatures.back();
         sigs.resize(src_entr.outputs.size());
-        LOG_PRINT_L1("Outputs: " << src_entr.real_output <<" Fake: "<<src_entr.outputs.size());
         if (!zero_secret_key)
         {
             // Dilithium - signature
@@ -519,7 +519,7 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, std::vector<uint8_t> extra,
+  bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra,
                                 transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const crypto::public_key &tx_pub_key, const std::vector<crypto::secret_key> &additional_tx_keys, bool rct, const rct::RCTConfig &rct_config, rct::multisig_out *msout, bool shuffle_outs)
   {
       hw::device &hwdev = sender_account_keys.get_device();
@@ -541,7 +541,7 @@ namespace cryptonote
       tx.version = rct ? 2 : 1;
       tx.unlock_time = unlock_time;
 
-      tx.extra = extra;
+      tx.extra = std::move(extra);
       crypto::public_key txkey_pub = tx_pub_key;
 
       // if we have a stealth payment id, find it and encrypt it with the tx key now
@@ -700,7 +700,7 @@ namespace cryptonote
       // figure out if we need to make additional tx pubkeys
       size_t num_stdaddresses = 0;
       size_t num_subaddresses = 0;
-      account_public_address single_dest_subaddress;
+      account_public_address single_dest_subaddress{};
       classify_addresses(destinations, change_addr, num_stdaddresses, num_subaddresses, single_dest_subaddress);
 
       // if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
@@ -760,8 +760,8 @@ namespace cryptonote
       if (need_additional_txkeys)
       {
           LOG_PRINT_L2("additional tx pubkeys: ");
-          for (size_t i = 0; i < additional_tx_public_keys.size(); ++i)
-              LOG_PRINT_L2(additional_tx_public_keys[i]);
+          for (const auto & additional_tx_public_key : additional_tx_public_keys)
+              LOG_PRINT_L2(additional_tx_public_key);
           add_additional_tx_pub_keys_to_extra(tx.extra, additional_tx_public_keys);
       }
 
@@ -774,8 +774,10 @@ namespace cryptonote
 
       // check for watch only wallet
       bool zero_secret_key = true;
-      for (size_t i = 0; i < sizeof(sender_account_keys.m_spend_secret_key); ++i)
-          zero_secret_key &= (sender_account_keys.m_spend_secret_key.data[i] == 0);
+      for(const auto c : sender_account_keys.m_spend_secret_key.data)
+      {
+          zero_secret_key &= (c == 0);
+      }
       if (zero_secret_key)
       {
           MDEBUG("Null secret key, skipping signatures");
@@ -784,7 +786,7 @@ namespace cryptonote
       if (tx.version == 1)
       {
           //generate ring signatures
-          crypto::hash tx_prefix_hash;
+          crypto::hash tx_prefix_hash{};
           get_transaction_prefix_hash(tx, tx_prefix_hash);
 
           std::stringstream ss_ring_s;
