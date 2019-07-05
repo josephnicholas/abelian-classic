@@ -497,13 +497,13 @@ namespace cryptonote
         if (!zero_secret_key)
         {
             // Dilithium - signature
-            crypto::public_key k_i;
+            crypto::public_key pub;
             crypto::secret_key sec;
 
-            std::memcpy(&k_i, &sender_account_keys.m_account_address.m_spend_public_key, CRYPTO_PUBLICKEYBYTES);
+            std::memcpy(&pub, &sender_account_keys.m_account_address.m_spend_public_key, CRYPTO_PUBLICKEYBYTES);
             std::memcpy(&sec, &sender_account_keys.m_spend_secret_key, CRYPTO_SECRETKEYBYTES);
 
-            crypto::generate_signature(tx_prefix_hash, k_i, sec, *sigs.data());
+            crypto::generate_signature(tx_prefix_hash, pub, sec, *sigs.data());
         }
         ss_ring_s << "signatures:" << ENDL;
         std::for_each(sigs.begin(), sigs.end(), [&](const crypto::signature& s){ss_ring_s << s << ENDL;});
@@ -783,6 +783,7 @@ namespace cryptonote
           MDEBUG("Null secret key, skipping signatures");
       }
 
+      LOG_PRINT_L2("Transaction source size: "<< sources.size());
       if (tx.version == 1)
       {
           //generate ring signatures
@@ -804,17 +805,17 @@ namespace cryptonote
               tx.signatures.push_back(std::vector<crypto::signature>());
               std::vector<crypto::signature>& sigs = tx.signatures.back();
               sigs.resize(src_entr.outputs.size());
-              LOG_PRINT_L1("Outputs: " << src_entr.real_output <<" Fake: "<<src_entr.outputs.size());
+
               if (!zero_secret_key)
               {
                   // Dilithium - signature
-                  crypto::public_key k_i;
+                  crypto::public_key pub;
                   crypto::secret_key sec;
 
-                  std::memcpy(&k_i, &sender_account_keys.m_account_address.m_spend_public_key, CRYPTO_PUBLICKEYBYTES);
+                  std::memcpy(&pub, &sender_account_keys.m_account_address.m_spend_public_key, CRYPTO_PUBLICKEYBYTES);
                   std::memcpy(&sec, &sender_account_keys.m_spend_secret_key, CRYPTO_SECRETKEYBYTES);
 
-                  crypto::generate_signature(tx_prefix_hash, k_i, sec, *sigs.data());
+                  crypto::generate_signature(tx_prefix_hash, pub, sec, *sigs.data());
               }
               ss_ring_s << "signatures:" << ENDL;
               std::for_each(sigs.begin(), sigs.end(), [&](const crypto::signature& s){ss_ring_s << s << ENDL;});
