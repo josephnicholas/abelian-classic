@@ -161,6 +161,10 @@ DISABLE_VS_WARNINGS(4244 4345)
   {
     crypto::rand_seed  first = generate_keys(m_keys.m_account_address.m_spend_public_key, m_keys.m_spend_secret_key, recovery_key, recover);
 
+    // Sample compression of public keys.
+    crypto::rand_seed pubKeySample;
+    shake256((uint8_t *)&pubKeySample, sizeof(crypto::rand_seed), (uint8_t *)&m_keys.m_account_address.m_spend_public_key, sizeof(crypto::public_key));
+
     // rng for generating second set of keys is hash of first rng.  means only one set of electrum-style words needed for recovery
     crypto::rand_seed  second;
 
