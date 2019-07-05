@@ -101,6 +101,8 @@ static const struct {
   time_t time;
 } testnet_hard_forks[] = {
   { 1, 1, 0, 1341378000 },
+
+  { 7, 6800, 0, 1562126525 },
 };
 static const uint64_t testnet_hard_fork_version_1_till = 624633;
 
@@ -2580,6 +2582,8 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
 
   const uint8_t hf_version = m_hardfork->get_current_version();
 
+  LOG_PRINT_L2("Check HF_VERSION = " << static_cast<int>(hf_version));
+
   // from hard fork 2, we forbid dust and compound outputs
   if (hf_version >= 2) {
     for (auto &o: tx.vout) {
@@ -2611,16 +2615,16 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
     for (const auto &o: tx.vout) {
       if (o.target.type() == typeid(txout_to_key)) {
         const txout_to_key& out_to_key = boost::get<txout_to_key>(o.target);
-        if (!crypto::check_key(out_to_key.key)) {
+        /*if (!crypto::check_key(out_to_key.key)) {
           tvc.m_invalid_output = true;
           return false;
-        }
+        }*/
       }
     }
   }
 
   // from v8, allow bulletproofs
-  if (hf_version < 8) {
+  if (hf_version < HF_VERSION_ALLOW_RCT) {
     if (tx.version >= 2) {
       const bool bulletproof = rct::is_rct_bulletproof(tx.rct_signatures.type);
       if (bulletproof || !tx.rct_signatures.p.bulletproofs.empty())
@@ -2633,7 +2637,7 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
   }
 
   // from v9, forbid borromean range proofs
-  if (hf_version > 8) {
+  if (hf_version > HF_VERSION_ALLOW_RCT) {
     if (tx.version >= 2) {
       const bool borromean = rct::is_rct_borromean(tx.rct_signatures.type);
       if (borromean)
@@ -2790,7 +2794,8 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
   {
     size_t n_unmixable = 0, n_mixable = 0;
     size_t mixin = std::numeric_limits<size_t>::max();
-    const size_t min_mixin = hf_version >= HF_VERSION_MIN_MIXIN_10 ? 10 : hf_version >= HF_VERSION_MIN_MIXIN_6 ? 6 : hf_version >= HF_VERSION_MIN_MIXIN_4 ? 4 : 2;
+    const size_t min_mixin = 0;q
+    LOG_PRINT_L2("min_mixin: "<< min_mixin);
     for (const auto& txin : tx.vin)
     {
       // non txin_to_key inputs will be rejected below
@@ -2864,20 +2869,21 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
 
   // from v7, sorted ins
   if (hf_version >= 7) {
-    const crypto::key_image *last_key_image = NULL;
+    //const crypto::key_image *last_key_image = NULL;
+    const crypto::pq_seed *last_rand_key = NULL;
     for (size_t n = 0; n < tx.vin.size(); ++n)
     {
       const txin_v &txin = tx.vin[n];
       if (txin.type() == typeid(txin_to_key))
       {
         const txin_to_key& in_to_key = boost::get<txin_to_key>(txin);
-        if (last_key_image && memcmp(&in_to_key.k_image, last_key_image, sizeof(*last_key_image)) >= 0)
+        if (last_rand_key && memcmp(&in_to_key.random, last_rand_key, sizeof(*last_rand_key)) >= 0) // changed to the random key in input instead of the key_image
         {
           MERROR_VER("transaction has unsorted inputs");
           tvc.m_verifivation_failed = true;
           return false;
         }
-        last_key_image = &in_to_key.k_image;
+        last_rand_key = &in_to_key.random;
       }
     }
   }
