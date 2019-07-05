@@ -2794,7 +2794,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
   {
     size_t n_unmixable = 0, n_mixable = 0;
     size_t mixin = std::numeric_limits<size_t>::max();
-    const size_t min_mixin = 0;q
+    const size_t min_mixin = 0;
     LOG_PRINT_L2("min_mixin: "<< min_mixin);
     for (const auto& txin : tx.vin)
     {
