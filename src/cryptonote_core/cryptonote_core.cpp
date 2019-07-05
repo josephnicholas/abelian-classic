@@ -1583,6 +1583,11 @@ namespace cryptonote
     return m_mempool.get_transactions_and_spent_keys_info(tx_infos, key_image_infos, include_sensitive_data);
   }
   //-----------------------------------------------------------------------------------------------
+  bool core::get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_rng_info>& rng_infos, bool include_sensitive_data) const
+  {
+      return m_mempool.get_transactions_and_spent_keys_info(tx_infos, rng_infos, include_sensitive_data);
+  }
+  //-----------------------------------------------------------------------------------------------
   bool core::get_pool_for_rpc(std::vector<cryptonote::rpc::tx_in_pool>& tx_infos, cryptonote::rpc::key_images_with_tx_hashes& key_image_infos) const
   {
     return m_mempool.get_pool_for_rpc(tx_infos, key_image_infos);

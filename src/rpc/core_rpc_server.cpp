@@ -798,6 +798,75 @@ namespace cryptonote
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
+  bool core_rpc_server::on_is_rng_spent(const COMMAND_RPC_IS_RNG_SPENT::request& req, COMMAND_RPC_IS_RNG_SPENT::response& res, const connection_context *ctx)
+  {
+      PERF_TIMER(on_is_rng_spent);
+      auto ok = false;
+      if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_IS_RNG_SPENT>(invoke_http_mode::JON, "/is_rng_spent", req, res, ok))
+          return ok;
+
+      const bool restricted = m_restricted && ctx;
+      const bool request_has_rpc_origin = ctx != NULL;
+      std::vector<crypto::pq_seed> rngs;
+      for(const auto& rng_hex_str: req.rngs)
+      {
+          blobdata b;
+          if(!string_tools::parse_hexstr_to_binbuff(rng_hex_str, b))
+          {
+              res.status = "Failed to parse hex representation of random key";
+              return true;
+          }
+          if(b.size() != sizeof(crypto::pq_seed))
+          {
+              res.status = "Failed, size of data mismatch";
+          }
+          rngs.push_back(*reinterpret_cast<const crypto::pq_seed*>(b.data()));
+      }
+      std::vector<bool> spent_status;
+      bool r = m_core.are_rngs_spent(rngs, spent_status);
+      if(!r)
+      {
+          res.status = "Failed";
+          return true;
+      }
+      res.rng_spent_status.clear();
+      for (auto && status : spent_status)
+          res.rng_spent_status.push_back(spent_statu ? COMMAND_RPC_IS_RNG_SPENT::RNG_SPENT_IN_BLOCKCHAIN : COMMAND_RPC_IS_RNG_SPENT::RNG_UNSPENT);
+
+      // check the pool too
+      std::vector<cryptonote::tx_info> txs;
+      std::vector<cryptonote::spent_rng_info> rngI;
+      r = m_core.get_pool_transactions_and_spent_keys_info(txs, rngI, !request_has_rpc_origin || !restricted);
+      if(!r)
+      {
+          res.status = "Failed";
+          return true;
+      }
+      for (auto & info : rngI)
+      {
+          crypto::hash hash{};
+          crypto::pq_seed spent_rng{};
+          if (parse_hash256(info.id_hash, hash))
+          {
+              memcpy(&spent_rng, &hash, sizeof(hash)); // a bit dodgy, should be other parse functions somewhere
+              for (size_t n = 0; n < res.rng_spent_status.size(); ++n)
+              {
+                  if (res.rng_spent_status[n] == COMMAND_RPC_IS_RNG_SPENT::RNG_UNSPENT)
+                  {
+                      if (rngs[n] == spent_rng)
+                      {
+                          res.rng_spent_status[n] = COMMAND_RPC_IS_RNG_SPENT::RNG_SPENT_IN_POOL;
+                          break;
+                      }
+                  }
+              }
+          }
+      }
+
+      res.status = CORE_RPC_STATUS_OK;
+      return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_send_raw_tx(const COMMAND_RPC_SEND_RAW_TX::request& req, COMMAND_RPC_SEND_RAW_TX::response& res, const connection_context *ctx)
   {
     PERF_TIMER(on_send_raw_tx);

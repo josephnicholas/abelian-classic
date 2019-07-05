@@ -483,6 +483,11 @@ namespace cryptonote
      bool get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_key_image_info>& key_image_infos, bool include_unrelayed_txes = true) const;
 
      /**
+      * Override
+      */
+     bool get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_rng_info>& rng_infos, bool include_unrelayed_txes = true) const;
+
+     /**
       * @copydoc tx_memory_pool::get_pool_for_rpc
       *
       * @note see tx_memory_pool::get_pool_for_rpc

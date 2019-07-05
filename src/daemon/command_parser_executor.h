@@ -89,6 +89,8 @@ public:
 
   bool is_key_image_spent(const std::vector<std::string>& args);
 
+  bool is_rng_spent(const std::vector<std::string>& args);
+
   bool print_transaction_pool_long(const std::vector<std::string>& args);
 
   bool print_transaction_pool_short(const std::vector<std::string>& args);

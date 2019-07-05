@@ -462,7 +462,7 @@ struct COMMAND_RPC_IS_RNG_SPENT
   {
     std::vector<std::string> rngs;
 
-  BEGIN_KV_SERIALIZE_MAP()
+    BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(rngs)
     END_KV_SERIALIZE_MAP()
   };
@@ -474,7 +474,7 @@ struct COMMAND_RPC_IS_RNG_SPENT
     std::string status;
     bool untrusted;
 
-  BEGIN_KV_SERIALIZE_MAP()
+    BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(rng_spent_status)
       KV_SERIALIZE(status)
       KV_SERIALIZE(untrusted)
@@ -1386,6 +1386,17 @@ struct COMMAND_RPC_IS_RNG_SPENT
       KV_SERIALIZE(id_hash)
       KV_SERIALIZE(txs_hashes)
     END_KV_SERIALIZE_MAP()
+  };
+
+  struct spent_rng_info
+  {
+      std::string id_hash;
+      std::vector<std::string> txs_hashes;
+
+      BEGIN_KV_SERIALIZE_MAP()
+          KV_SERIALIZE(id_hash)
+          KV_SERIALIZE(txs_hashes)
+      END_KV_SERIALIZE_MAP()
   };
 
   struct COMMAND_RPC_GET_TRANSACTION_POOL

@@ -283,6 +283,11 @@ namespace cryptonote
     bool get_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_key_image_info>& key_image_infos, bool include_sensitive_data = true) const;
 
     /**
+     * Override
+     */
+    bool get_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_rng_info>& rng_infos, bool include_sensitive_data = true) const;
+
+    /**
      * @brief get information about all transactions and key images in the pool
      *
      * see documentation on tx_in_pool and key_images_with_tx_hashes for more details

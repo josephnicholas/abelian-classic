@@ -905,6 +905,80 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------------------------
+  bool tx_memory_pool::get_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_rng_info>& rng_infos, bool include_sensitive_data) const
+  {
+      CRITICAL_REGION_LOCAL(m_transactions_lock);
+      CRITICAL_REGION_LOCAL1(m_blockchain);
+      tx_infos.reserve(m_blockchain.get_txpool_tx_count());
+      rng_infos.reserve(m_blockchain.get_txpool_tx_count());
+      m_blockchain.for_all_txpool_txes([&tx_infos, rng_infos, include_sensitive_data](const crypto::hash &txid, const txpool_tx_meta_t &meta, const cryptonote::blobdata *bd){
+          tx_info txi;
+          txi.id_hash = epee::string_tools::pod_to_hex(txid);
+          txi.tx_blob = *bd;
+          transaction tx;
+          if (!parse_and_validate_tx_from_blob(*bd, tx))
+          {
+              MERROR("Failed to parse tx from txpool");
+              // continue
+              return true;
+          }
+          tx.set_hash(txid);
+          txi.tx_json = obj_to_json_str(tx);
+          txi.blob_size = bd->size();
+          txi.weight = meta.weight;
+          txi.fee = meta.fee;
+          txi.kept_by_block = meta.kept_by_block;
+          txi.max_used_block_height = meta.max_used_block_height;
+          txi.max_used_block_id_hash = epee::string_tools::pod_to_hex(meta.max_used_block_id);
+          txi.last_failed_height = meta.last_failed_height;
+          txi.last_failed_id_hash = epee::string_tools::pod_to_hex(meta.last_failed_id);
+          // In restricted mode we do not include this data:
+          txi.receive_time = include_sensitive_data ? meta.receive_time : 0;
+          txi.relayed = meta.relayed;
+          // In restricted mode we do not include this data:
+          txi.last_relayed_time = include_sensitive_data ? meta.last_relayed_time : 0;
+          txi.do_not_relay = meta.do_not_relay;
+          txi.double_spend_seen = meta.double_spend_seen;
+          tx_infos.push_back(std::move(txi));
+          return true;
+      }, true, include_sensitive_data);
+
+      txpool_tx_meta_t meta;
+      for (const auto& rngee : m_spent_rngs) {
+          const auto& rng = rngee.first;
+          const auto& rng_set = rngee.second;
+          spent_rng_info rngI;
+          rngI.id_hash = epee::string_tools::pod_to_hex(rng);
+          for (const auto& tx_id_hash : rng_set)
+          {
+              if (!include_sensitive_data)
+              {
+                  try
+                  {
+                      if (!m_blockchain.get_txpool_tx_meta(tx_id_hash, meta))
+                      {
+                          MERROR("Failed to get tx meta from txpool");
+                          return false;
+                      }
+                      if (!meta.relayed)
+                          // Do not include that transaction if in restricted mode and it's not relayed
+                          continue;
+                  }
+                  catch (const std::exception &e)
+                  {
+                      MERROR("Failed to get tx meta from txpool: " << e.what());
+                      return false;
+                  }
+              }
+              rngI.txs_hashes.push_back(epee::string_tools::pod_to_hex(tx_id_hash));
+          }
+          // Only return key images for which we have at least one tx that we can show for them
+          if (!rngI.txs_hashes.empty())
+              rng_infos.push_back(rngI);
+      }
+      return true;
+  }
+  // ---------------------------------------------------------------------------------
   bool tx_memory_pool::get_pool_for_rpc(std::vector<cryptonote::rpc::tx_in_pool>& tx_infos, cryptonote::rpc::key_images_with_tx_hashes& key_image_infos) const
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);

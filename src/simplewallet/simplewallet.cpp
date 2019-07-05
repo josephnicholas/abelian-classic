@@ -5460,6 +5460,10 @@ bool simple_wallet::rescan_spent(const std::vector<std::string> &args)
   {
     fail_msg_writer() << tr("failed to get spent status");
   }
+  catch (const tools::error::is_rng_spent_error&)
+  {
+    fail_msg_writer() << tr("failed to get spent status");
+  }
   catch (const tools::error::wallet_rpc_error& e)
   {
     LOG_ERROR("RPC error: " << e.to_string());
