@@ -7037,6 +7037,7 @@ int wallet2::get_fee_algorithm() const
 //------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::get_min_ring_size() const
 {
+    /*
   if (use_fork_rules(8, 10))
     return 11;
   if (use_fork_rules(7, 10))
@@ -7044,7 +7045,7 @@ uint64_t wallet2::get_min_ring_size() const
   if (use_fork_rules(6, 10))
     return 5;
   if (use_fork_rules(2, 10))
-    return 3;
+    return 3;*/
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------
