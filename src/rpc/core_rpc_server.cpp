@@ -831,7 +831,7 @@ namespace cryptonote
       }
       res.rng_spent_status.clear();
       for (auto && status : spent_status)
-          res.rng_spent_status.push_back(spent_statu ? COMMAND_RPC_IS_RNG_SPENT::RNG_SPENT_IN_BLOCKCHAIN : COMMAND_RPC_IS_RNG_SPENT::RNG_UNSPENT);
+          res.rng_spent_status.push_back(status ? COMMAND_RPC_IS_RNG_SPENT::RNG_SPENT_IN_BLOCKCHAIN : COMMAND_RPC_IS_RNG_SPENT::RNG_UNSPENT);
 
       // check the pool too
       std::vector<cryptonote::tx_info> txs;

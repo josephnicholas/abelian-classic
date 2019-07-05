@@ -1040,7 +1040,7 @@ bool t_rpc_command_executor::is_rng_spent(const crypto::pq_seed &rng) {
     if (1 == res.rng_spent_status.size())
     {
         // first as hex
-        tools::success_msg_writer() << rng << ": " << (res.rng_spent_status.front() ? "spent" : "unspent") << (res.rng_spent_status.front() == cryptonote::COMMAND_RPC_IS_RNG_SPENT::RNG_SPENT_IN_POOL ? " (in pool)" : "");
+        tools::success_msg_writer() << &rng << ": " << (res.rng_spent_status.front() ? "spent" : "unspent") << (res.rng_spent_status.front() == cryptonote::COMMAND_RPC_IS_RNG_SPENT::RNG_SPENT_IN_POOL ? " (in pool)" : "");
     }
     else
     {

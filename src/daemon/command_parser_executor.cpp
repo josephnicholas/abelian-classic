@@ -299,7 +299,7 @@ bool t_command_parser_executor::is_rng_spent(const std::vector<std::string>& arg
     if (parse_hash256(str, hash))
     {
         memcpy(&rng, &hash, sizeof(rng));
-        m_executor.is_key_image_spent(rng);
+        m_executor.is_rng_spent(rng);
     }
 
     return true;
