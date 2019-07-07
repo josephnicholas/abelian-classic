@@ -1,4 +1,9 @@
-# Abelian [![Build Status](https://travis-ci.com/CryptoBLK/Abelian.svg?branch=master)](https://travis-ci.com/CryptoBLK/Abelian)
+# Abelian 
+[![Build Status](https://travis-ci.com/CryptoBLK/Abelian.svg?branch=master)](https://travis-ci.com/CryptoBLK/Abelian)
+<a href="https://scan.coverity.com/projects/abelian">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/18735/badge.svg"/>
+</a>
 
 Copyright (c) 2019 The Abelian Project.  
 Portions Copyright (c) 2014-2019 The Monero Project.  
