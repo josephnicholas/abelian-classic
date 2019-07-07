@@ -100,9 +100,9 @@ static const struct {
   uint8_t threshold;
   time_t time;
 } testnet_hard_forks[] = {
-  { 1, 1, 0, 1341378000 },
+  { 1, 1, 0, 1341378000 }, // Version 1 will be used for Testnet alpha and beta releases until SALRS.
 
-  { 7, 6800, 0, 1562126525 },
+  { 7, 65000, 0, 1570606200 }, // Version 7 will enable SALRS on October 9, 2019 at height
 };
 static const uint64_t testnet_hard_fork_version_1_till = 624633;
 

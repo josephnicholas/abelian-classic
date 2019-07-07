@@ -806,7 +806,7 @@ namespace cryptonote
           return ok;
 
       const bool restricted = m_restricted && ctx;
-      const bool request_has_rpc_origin = ctx != NULL;
+      const bool request_has_rpc_origin = ctx != nullptr;
       std::vector<crypto::pq_seed> rngs;
       for(const auto& rng_hex_str: req.rngs)
       {

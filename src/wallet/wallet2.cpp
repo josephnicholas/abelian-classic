@@ -1526,7 +1526,7 @@ bool wallet2::is_deprecated() const
 void wallet2::set_spent(size_t idx, uint64_t height)
 {
   transfer_details &td = m_transfers[idx];
-  LOG_PRINT_L2("Setting SPENT at " << height << ": ki " << td.m_key_image <<" random: "<< string_tools::pod_to_hex(td.m_rng_key) << ", amount " << print_money(td.m_amount));
+  LOG_PRINT_L2("Setting SPENT at " << height <<" random: "<< string_tools::pod_to_hex(td.m_rng_key) << ", amount " << print_money(td.m_amount));
   td.m_spent = true;
   td.m_spent_height = height;
 }
@@ -1534,7 +1534,7 @@ void wallet2::set_spent(size_t idx, uint64_t height)
 void wallet2::set_unspent(size_t idx)
 {
   transfer_details &td = m_transfers[idx];
-  LOG_PRINT_L2("Setting UNSPENT: ki " << td.m_key_image <<" random: "<< string_tools::pod_to_hex(td.m_rng_key) << ", amount " << print_money(td.m_amount));
+  LOG_PRINT_L2("Setting UNSPENT random: "<< string_tools::pod_to_hex(td.m_rng_key) << ", amount " << print_money(td.m_amount));
   td.m_spent = false;
   td.m_spent_height = 0;
 }
@@ -2149,7 +2149,7 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
     const cryptonote::txin_to_key &in_to_key = boost::get<cryptonote::txin_to_key>(in);
     auto it = m_key_images.find(in_to_key.k_image);
     auto itRng = m_tx_rng.find(in_to_key.random);
-    if(it != m_key_images.end() && itRng != m_tx_rng.end())
+    if(itRng != m_tx_rng.end())
     {
       transfer_details& td = m_transfers[itRng->second];
       uint64_t amount = in_to_key.amount;
@@ -2179,7 +2179,7 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
       {
         LOG_PRINT_L0("Spent money: " << print_money(amount) << ", with tx: " << txid);
         set_spent(itRng->second, height);
-        if (0 != m_callback)
+        if (nullptr != m_callback)
           m_callback->on_money_spent(height, txid, tx, amount, tx, td.m_subaddr_index);
       }
     }
@@ -5805,6 +5805,7 @@ void wallet2::rescan_spent()
   const size_t chunk_size = 1000;
   for (size_t start_offset = 0; start_offset < m_transfers.size(); start_offset += chunk_size)
   {
+#if 0
     const size_t n_outputs = std::min<size_t>(chunk_size, m_transfers.size() - start_offset);
     MDEBUG("Calling is_key_image_spent on " << start_offset << " - " << (start_offset + n_outputs - 1) << ", out of " << m_transfers.size());
     COMMAND_RPC_IS_KEY_IMAGE_SPENT::request req = AUTO_VAL_INIT(req);
@@ -5821,6 +5822,25 @@ void wallet2::rescan_spent()
       "daemon returned wrong response for is_key_image_spent, wrong amounts count = " +
       std::to_string(daemon_resp.spent_status.size()) + ", expected " +  std::to_string(n_outputs));
     std::copy(daemon_resp.spent_status.begin(), daemon_resp.spent_status.end(), std::back_inserter(spent_status));
+#endif
+    const auto n_outputs = std::min<size_t>(chunk_size, m_transfers.size() - start_offset);
+    MDEBUG("Calling is_rng_spent on " << start_offset << " - " << (start_offset + n_outputs - 1) << ", out of " << m_transfers.size());
+    COMMAND_RPC_IS_RNG_SPENT::request req = AUTO_VAL_INIT(req);
+    COMMAND_RPC_IS_RNG_SPENT::response daemon_resp = AUTO_VAL_INIT(daemon_resp);
+
+    for (auto n = start_offset; n < start_offset + n_outputs; ++n)
+    {
+        req.rngs.emplace_back(string_tools::pod_to_hex(m_transfers[n].m_rng_key));
+    }
+    m_daemon_rpc_mutex.lock();
+    auto r = invoke_http_json("/is_rng_spent", req, daemon_resp, rpc_timeout);
+    m_daemon_rpc_mutex.unlock();
+    THROW_WALLET_EXCEPTION_IF(!r, error::no_connection_to_daemon, "is_rng_spent");
+    THROW_WALLET_EXCEPTION_IF(daemon_resp.status == CORE_RPC_STATUS_BUSY, error::daemon_busy, "is_rng_spent");
+    THROW_WALLET_EXCEPTION_IF(daemon_resp.status != CORE_RPC_STATUS_OK, error::is_rng_spent_error, get_rpc_status(daemon_resp.status));
+    THROW_WALLET_EXCEPTION_IF(daemon_resp.rng_spent_status.size() != n_outputs, error::wallet_internal_error,
+                            "daemon returned wrong response for is_rng_spent, wrong amounts count = " +
+                            std::to_string(daemon_resp.rng_spent_status.size()) + ", expected " +  std::to_string(n_outputs));
   }
 
   // update spent status
@@ -5828,19 +5848,20 @@ void wallet2::rescan_spent()
   {
     transfer_details& td = m_transfers[i];
     // a view wallet may not know about key images
-    if (!td.m_key_image_known || !td.m_rng_key_known || td.m_key_image_partial)
+    if (!td.m_rng_key_known || td.m_key_image_partial)
       continue;
-    if (td.m_spent != (spent_status[i] != COMMAND_RPC_IS_KEY_IMAGE_SPENT::UNSPENT))
+    //if (td.m_spent != (spent_status[i] != COMMAND_RPC_IS_KEY_IMAGE_SPENT::UNSPENT) )
+    if (td.m_spent != (spent_status[i] != COMMAND_RPC_IS_RNG_SPENT::RNG_UNSPENT) )
     {
       if (td.m_spent)
       {
-        LOG_PRINT_L0("Marking output " << i << "(" << td.m_key_image << ")" <<": "<< (unsigned char  *)&td.m_rng_key <<" as unspent, it was marked as spent");
+        LOG_PRINT_L0("Marking output " << i << "(" << string_tools::pod_to_hex(td.m_rng_key) << ")" <<" as unspent, it was marked as spent");
         set_unspent(i);
         td.m_spent_height = 0;
       }
       else
       {
-        LOG_PRINT_L0("Marking output " << i << "(" << td.m_key_image << ")" <<": "<< (unsigned char  *)&td.m_rng_key <<" as spent, it was marked as unspent");
+        LOG_PRINT_L0("Marking output " << i << "(" << string_tools::pod_to_hex(td.m_rng_key) << ")" <<" as spent, it was marked as unspent");
         set_spent(i, td.m_spent_height);
         // unknown height, if this gets reorged, it might still be missed
       }
@@ -11320,18 +11341,18 @@ bool wallet2::check_reserve_proof(const cryptonote::account_public_address &addr
   // compute signature prefix hash
   std::string prefix_data = message;
   prefix_data.append((const char*)&address, sizeof(cryptonote::account_public_address));
-  for (size_t i = 0; i < proofs.size(); ++i)
+  for (auto & proof : proofs)
   {
-    prefix_data.append((const char*)&proofs[i].key_image, sizeof(crypto::key_image));
+    prefix_data.append((const char*)&proof.key_image, sizeof(crypto::key_image));
   }
-  crypto::hash prefix_hash;
+  crypto::hash prefix_hash{};
   crypto::cn_fast_hash(prefix_data.data(), prefix_data.size(), prefix_hash);
 
   // fetch txes from daemon
   COMMAND_RPC_GET_TRANSACTIONS::request gettx_req;
   COMMAND_RPC_GET_TRANSACTIONS::response gettx_res;
-  for (size_t i = 0; i < proofs.size(); ++i)
-    gettx_req.txs_hashes.push_back(epee::string_tools::pod_to_hex(proofs[i].txid));
+  for (auto & proof : proofs)
+    gettx_req.txs_hashes.push_back(epee::string_tools::pod_to_hex(proof.txid));
   gettx_req.decode_as_json = false;
   gettx_req.prune = true;
   m_daemon_rpc_mutex.lock();
@@ -11341,6 +11362,7 @@ bool wallet2::check_reserve_proof(const cryptonote::account_public_address &addr
     error::wallet_internal_error, "Failed to get transaction from daemon");
 
   // check spent status
+#if 0
   COMMAND_RPC_IS_KEY_IMAGE_SPENT::request kispent_req;
   COMMAND_RPC_IS_KEY_IMAGE_SPENT::response kispent_res;
   for (size_t i = 0; i < proofs.size(); ++i)
@@ -11350,6 +11372,16 @@ bool wallet2::check_reserve_proof(const cryptonote::account_public_address &addr
   m_daemon_rpc_mutex.unlock();
   THROW_WALLET_EXCEPTION_IF(!ok || kispent_res.spent_status.size() != proofs.size(),
     error::wallet_internal_error, "Failed to get key image spent status from daemon");
+#endif
+  COMMAND_RPC_IS_RNG_SPENT::request rngspent_req;
+  COMMAND_RPC_IS_RNG_SPENT::response rngspent_res;
+  for(auto proof : proofs){
+      rngspent_req.rngs.emplace_back(epee::string_tools::pod_to_hex(proof.rng));
+  }
+  m_daemon_rpc_mutex.lock();
+  ok = invoke_http_json("/is_rng_spent", rngspent_req, rngspent_res, rpc_timeout);
+  m_daemon_rpc_mutex.unlock();
+  THROW_WALLET_EXCEPTION_IF(!ok || rngspent_res.rng_spent_status.size() != proofs.size(), error::wallet_internal_error, "Failed to get rng spent status from daemon");
 
   total = spent = 0;
   for (size_t i = 0; i < proofs.size(); ++i)
@@ -11358,7 +11390,7 @@ bool wallet2::check_reserve_proof(const cryptonote::account_public_address &addr
     THROW_WALLET_EXCEPTION_IF(gettx_res.txs[i].in_pool, error::wallet_internal_error, "Tx is unconfirmed");
 
     cryptonote::transaction tx;
-    crypto::hash tx_hash;
+    crypto::hash tx_hash{};
     ok = get_pruned_tx(gettx_res.txs[i], tx, tx_hash);
     THROW_WALLET_EXCEPTION_IF(!ok, error::wallet_internal_error, "Failed to parse transaction from daemon");
 
@@ -11382,7 +11414,7 @@ bool wallet2::check_reserve_proof(const cryptonote::account_public_address &addr
       return false;
 
     // check signature for key image
-    const std::vector<const crypto::public_key*> pubs = { &out_key->key };
+    const std::vector<const crypto::public_key*> pubs { &out_key->key };
     // Dilithium - sig verification
     crypto::public_key k_i;
     std::memcpy(&k_i, &proof.key_image, CRYPTO_PUBLICKEYBYTES);
@@ -11410,7 +11442,7 @@ bool wallet2::check_reserve_proof(const cryptonote::account_public_address &addr
       amount = rct::h2d(ecdh_info.amount);
     }
     total += amount;
-    if (kispent_res.spent_status[i])
+    if (rngspent_res.rng_spent_status[i]) // workaround changes.
       spent += amount;
   }
 

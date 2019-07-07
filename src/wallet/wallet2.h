@@ -552,6 +552,7 @@ private:
       crypto::key_image key_image;
       crypto::signature shared_secret_sig;
       crypto::signature key_image_sig;
+      crypto::pq_seed rng;
     };
 
     typedef std::tuple<uint64_t, crypto::public_key, rct::key> get_outs_entry;
