@@ -5841,6 +5841,7 @@ void wallet2::rescan_spent()
     THROW_WALLET_EXCEPTION_IF(daemon_resp.rng_spent_status.size() != n_outputs, error::wallet_internal_error,
                             "daemon returned wrong response for is_rng_spent, wrong amounts count = " +
                             std::to_string(daemon_resp.rng_spent_status.size()) + ", expected " +  std::to_string(n_outputs));
+    std::copy(daemon_resp.rng_spent_status.begin(), daemon_resp.rng_spent_status.end(), std::back_inserter(spent_status));
   }
 
   // update spent status

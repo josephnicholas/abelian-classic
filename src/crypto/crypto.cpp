@@ -183,7 +183,7 @@ namespace crypto {
     ge_p1p1_to_p2(&point2, &point3);
     ge_tobytes(&derivation, &point2);
 #else
-    std::copy(key1.buffer.begin(), key1.buffer.end(), derivation.buffer.begin());
+    derivation.buffer = key1.buffer;
 #endif
     return true;
   }
@@ -219,7 +219,7 @@ namespace crypto {
     ge_p1p1_to_p2(&point5, &point4);
     ge_tobytes(&derived_key, &point5);
 #else
-      std::copy(base.buffer.begin(), base.buffer.end(), derived_key.buffer.begin());
+      derived_key = base;
 #endif
     return true;
   }
@@ -232,7 +232,7 @@ namespace crypto {
     derivation_to_scalar(derivation, output_index, scalar);
     sc_add(&unwrap(derived_key), &unwrap(base), &scalar);
 #else
-      std::copy(base.buffer.begin(), base.buffer.end(), derived_key.buffer.begin());
+      derived_key = base;
 #endif
   }
 
@@ -254,7 +254,7 @@ namespace crypto {
     ge_p1p1_to_p2(&point5, &point4);
     ge_tobytes(&derived_key, &point5);
 #else
-      std::copy(out_key.buffer.begin(), out_key.buffer.end(), derived_key.buffer.begin());
+      derived_key = out_key;
 #endif
     return true;
   }
@@ -302,7 +302,7 @@ namespace crypto {
     if (!sc_isnonzero((const unsigned char*)sig.r.buffer.data()))
       goto try_again;
 #else
-    uint64_t signatureLength{};
+    unsigned long long signatureLength{};
     auto result = crypto_sign_dilithium((uint8_t *)sig.buffer.data(), &signatureLength, (unsigned char *)&prefix_hash, sizeof(prefix_hash), &sec);
     assert(result == 0);
 #endif
@@ -333,7 +333,7 @@ namespace crypto {
     sc_sub(&c, &c, &sig.c);
     return sc_isnonzero(&c) == 0;
 #else
-    uint64_t messageLength{};
+    unsigned long long messageLength{};
     std::array<uint8_t, CRYPTO_BYTES + HASH_SIZE> message{};
     auto result = crypto_sign_dilithium_open(message.data(), &messageLength, (uint8_t *)sig.buffer.data(), sizeof(sig), &pub);
 
@@ -508,7 +508,7 @@ namespace crypto {
   }
 
   static void hash_to_ec(const public_key &key, ge_p3 &res) {
-    hash h;
+    hash h{};
     ge_p2 point;
     ge_p1p1 point2;
     cn_fast_hash(std::addressof(key), sizeof(public_key), h);
@@ -528,7 +528,7 @@ namespace crypto {
 #else
     // The key image on these experimental change is just the same as the 'pub' parameter.
     // In future releases this will be fixed.
-    std::copy(pub.buffer.begin(), pub.buffer.end(), image.buffer.begin());
+    image.buffer = pub.buffer;
 #endif
   }
 
