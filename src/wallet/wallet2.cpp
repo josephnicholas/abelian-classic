@@ -1346,7 +1346,7 @@ bool wallet2::get_multisig_seed(epee::wipeable_string& seed, const epee::wipeabl
   {
     crypto::secret_key key;
     crypto::cn_slow_hash(passphrase.data(), passphrase.size(), (crypto::hash&)key);
-    sc_reduce32((unsigned char*)key.data);
+    sc_reduce32((unsigned char*)key.buffer.data());
     data = encrypt(data, key, true);
   }
 

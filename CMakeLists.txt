@@ -1021,7 +1021,9 @@ set(ENABLE_MULTISIG 0)
 
 # Set Dilithium experimental override
 set(DILITHIUM_CRYPTO 1)
+
 if(DILITHIUM_CRYPTO)
+  message(STATUS "Dilithium Enabled")
   add_definitions("-DNDILITHIUM_CRYPTO")
 endif()
 

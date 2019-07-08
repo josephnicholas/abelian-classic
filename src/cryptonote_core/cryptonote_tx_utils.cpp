@@ -462,7 +462,7 @@ namespace cryptonote
 
     // check for watch only wallet
     bool zero_secret_key = true;
-    for(char c : sender_account_keys.m_spend_secret_key.data)
+    for(char c : sender_account_keys.m_spend_secret_key.buffer)
     {
         zero_secret_key &= (c == 0);
     }
@@ -774,7 +774,7 @@ namespace cryptonote
 
       // check for watch only wallet
       bool zero_secret_key = true;
-      for(const auto c : sender_account_keys.m_spend_secret_key.data)
+      for(const auto c : sender_account_keys.m_spend_secret_key.buffer)
       {
           zero_secret_key &= (c == 0);
       }

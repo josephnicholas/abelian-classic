@@ -53,11 +53,11 @@ namespace crypto {
 
 #pragma pack(push, 1)
   POD_CLASS ec_point {
-      char data[CRYPTO_PUBLICKEYBYTES]; // We need to agree on this!
+      std::array<char, CRYPTO_PUBLICKEYBYTES> buffer;
   };
 
   POD_CLASS ec_scalar {
-      char data[CRYPTO_SECRETKEYBYTES]; // We need to agree on this!
+      std::array<char, CRYPTO_SECRETKEYBYTES> buffer;
   };
 
   POD_CLASS public_key: ec_point {
@@ -99,7 +99,7 @@ namespace crypto {
 
   POD_CLASS signature {
     //ec_scalar c, r; // TODO: changed to 32 byte rand for creating and checking ring sigs
-    char data[CRYPTO_BYTES + HASH_SIZE]; //32 is prefix hash length
+    std::array<char, CRYPTO_BYTES + HASH_SIZE> buffer;
     friend class crypto_ops;
   };
 #pragma pack(pop)

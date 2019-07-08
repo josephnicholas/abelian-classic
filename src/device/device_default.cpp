@@ -166,14 +166,14 @@ namespace hw {
                 crypto::secret_key m = get_subaddress_secret_key(keys.m_view_secret_key, index);
 
                 // M = m*G
-                ge_scalarmult_base(&p3, (const unsigned char*)m.data);
+                ge_scalarmult_base(&p3, (const unsigned char*)m.buffer.data());
 
                 // D = B + M
                 crypto::public_key D;
                 ge_p1p1 p1p1;
                 ge_add(&p1p1, &p3, &cached);
                 ge_p1p1_to_p3(&p3, &p1p1);
-                ge_p3_tobytes((unsigned char*)D.data, &p3);
+                ge_p3_tobytes((unsigned char*)D.buffer.data(), &p3);
 
                 pkeys.push_back(D);
             }

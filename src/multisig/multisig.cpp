@@ -80,7 +80,7 @@ namespace cryptonote
       rct::key sk = rct::scalarmultKey(rct::pk2rct(k), rct::sk2rct(blinded_skey));
       crypto::secret_key msk = get_multisig_blinded_secret_key(rct::rct2sk(sk));
       multisig_keys.push_back(msk);
-      sc_add(spend_skey.bytes, spend_skey.bytes, (const unsigned char*)msk.data);
+      sc_add(spend_skey.bytes, spend_skey.bytes, (const unsigned char*)msk.buffer.data());
     }
   }
   //-----------------------------------------------------------------
@@ -102,7 +102,7 @@ namespace cryptonote
     rct::key secret_key = rct::zero();
     for (const auto &k: multisig_keys)
     {
-      sc_add(secret_key.bytes, secret_key.bytes, (const unsigned char*)k.data);
+      sc_add(secret_key.bytes, secret_key.bytes, (const unsigned char*)k.buffer.data());
     }
 
     return rct::rct2sk(secret_key);

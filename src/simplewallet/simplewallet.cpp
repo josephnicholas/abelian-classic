@@ -625,7 +625,7 @@ namespace
   void print_secret_key(const crypto::secret_key &k)
   {
     static constexpr const char hex[] = u8"0123456789abcdef";
-    const uint8_t *ptr = (const uint8_t*)k.data;
+    const uint8_t *ptr = (const uint8_t*)k.buffer.data();
     for (size_t i = 0, sz = sizeof(k); i < sz; ++i)
     {
       putchar(hex[*ptr >> 4]);
@@ -3614,7 +3614,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         {
           crypto::secret_key key;
           crypto::cn_slow_hash(seed_pass.data(), seed_pass.size(), (crypto::hash&)key);
-          sc_reduce32((unsigned char*)key.data);
+          sc_reduce32((unsigned char*)key.buffer.data());
           multisig_keys = m_wallet->decrypt<epee::wipeable_string>(std::string(multisig_keys.data(), multisig_keys.size()), key, true);
         }
         else
