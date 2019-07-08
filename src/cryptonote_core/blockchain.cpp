@@ -170,7 +170,7 @@ bool Blockchain::have_tx_keyimg_as_spent(const crypto::key_image &key_im) const
   return  m_db->has_key_image(key_im);
 }
 // RNG
-bool Blockchain::have_tx_rng_as_spent(const crypto::pq_seed &rng) const
+bool Blockchain::have_tx_rng_as_spent(const crypto::random_key &rng) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   return m_db->has_spent_rng(rng);
@@ -2870,7 +2870,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
   // from v7, sorted ins
   if (hf_version >= 7) {
     //const crypto::key_image *last_key_image = NULL;
-    const crypto::pq_seed *last_rand_key = NULL;
+    const crypto::random_key *last_rand_key = NULL;
     for (size_t n = 0; n < tx.vin.size(); ++n)
     {
       const txin_v &txin = tx.vin[n];

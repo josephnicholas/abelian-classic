@@ -1231,7 +1231,7 @@ void BlockchainLMDB::add_spent_key(const crypto::key_image& k_image)
 }
 
 //RNG
-void BlockchainLMDB::add_spent_rng(const crypto::pq_seed& rand)
+void BlockchainLMDB::add_spent_rng(const crypto::random_key& rand)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
@@ -1251,7 +1251,7 @@ void BlockchainLMDB::add_spent_rng(const crypto::pq_seed& rand)
   }
 }
 
-void BlockchainLMDB::remove_spent_rng(const crypto::pq_seed& rand)
+void BlockchainLMDB::remove_spent_rng(const crypto::random_key& rand)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
@@ -3311,7 +3311,7 @@ bool BlockchainLMDB::has_key_image(const crypto::key_image& img) const
 }
 
 // RNG
-bool BlockchainLMDB::has_spent_rng(const crypto::pq_seed& rng) const
+bool BlockchainLMDB::has_spent_rng(const crypto::random_key& rng) const
 {
     LOG_PRINT_L3("BlockchainLMDB::" << __func__);
     check_open();
@@ -3329,7 +3329,7 @@ bool BlockchainLMDB::has_spent_rng(const crypto::pq_seed& rng) const
     return ret;
 }
 
-bool BlockchainLMDB::for_all_rng(std::function<bool(const crypto::pq_seed&)> r) const
+bool BlockchainLMDB::for_all_rng(std::function<bool(const crypto::random_key&)> r) const
 {
     LOG_PRINT_L3("BlockchainLMDB::" << __func__);
     check_open();
@@ -3352,7 +3352,7 @@ bool BlockchainLMDB::for_all_rng(std::function<bool(const crypto::pq_seed&)> r) 
       if (ret < 0){
         throw0(DB_ERROR("Failed to enumerate spent rng"));
       }
-      const auto rng = *(const crypto::pq_seed*)v.mv_data;
+      const auto rng = *(const crypto::random_key*)v.mv_data;
       if (!r(rng)) {
         fret = false;
         break;

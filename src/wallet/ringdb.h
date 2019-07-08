@@ -51,8 +51,8 @@ namespace tools
     bool set_ring(const crypto::chacha_key &chacha_key, const crypto::key_image &key_image, const std::vector<uint64_t> &outs, bool relative);
 
     // Random key
-    bool get_ring(const crypto::chacha_key &chacha_key, const crypto::pq_seed &rand_key, std::vector<uint64_t> &outs);
-    bool set_ring(const crypto::chacha_key &chacha_key, const crypto::pq_seed &rand_key, const std::vector<uint64_t> &outs, bool relative);
+    bool get_ring(const crypto::chacha_key &chacha_key, const crypto::random_key &rand_key, std::vector<uint64_t> &outs);
+    bool set_ring(const crypto::chacha_key &chacha_key, const crypto::random_key &rand_key, const std::vector<uint64_t> &outs, bool relative);
 
     bool blackball(const std::pair<uint64_t, uint64_t> &output);
     bool blackball(const std::vector<std::pair<uint64_t, uint64_t>> &outputs);

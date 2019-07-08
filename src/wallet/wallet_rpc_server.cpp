@@ -3029,7 +3029,7 @@ namespace tools
     bool r = wal->invoke_http_json("/getheight", hreq, hres);
     if (r)
       wal->set_refresh_from_block_height(hres.height);
-    crypto::rand_seed dummy_key{};
+    crypto::rand_key dummy_key{};
     try {
       wal->generate(wallet_file, req.password, dummy_key, false, false);
     }
@@ -3480,7 +3480,7 @@ namespace tools
         return false;
       }
     }
-    crypto::rand_seed recovery_key;
+    crypto::rand_key recovery_key;
     std::string old_language;
 
     // check the given seed
@@ -3572,7 +3572,7 @@ namespace tools
 
     wal->set_seed_language(mnemonic_language);
 
-    crypto::rand_seed recovery_val;
+    crypto::rand_key recovery_val;
     try
     {
       recovery_val = wal->generate(wallet_file, std::move(rc.second).password(), recovery_key, true, false, false);

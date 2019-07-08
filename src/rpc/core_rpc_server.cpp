@@ -807,7 +807,7 @@ namespace cryptonote
 
       const bool restricted = m_restricted && ctx;
       const bool request_has_rpc_origin = ctx != nullptr;
-      std::vector<crypto::pq_seed> rngs;
+      std::vector<crypto::random_key> rngs;
       for(const auto& rng_hex_str: req.rngs)
       {
           blobdata b;
@@ -816,11 +816,11 @@ namespace cryptonote
               res.status = "Failed to parse hex representation of random key";
               return true;
           }
-          if(b.size() != sizeof(crypto::pq_seed))
+          if(b.size() != sizeof(crypto::random_key))
           {
               res.status = "Failed, size of data mismatch";
           }
-          rngs.push_back(*reinterpret_cast<const crypto::pq_seed*>(b.data()));
+          rngs.push_back(*reinterpret_cast<const crypto::random_key*>(b.data()));
       }
       std::vector<bool> spent_status;
       bool r = m_core.are_rngs_spent(rngs, spent_status);
@@ -845,7 +845,7 @@ namespace cryptonote
       for (auto & info : rngI)
       {
           crypto::hash hash{};
-          crypto::pq_seed spent_rng{};
+          crypto::random_key spent_rng{};
           if (parse_hash256(info.id_hash, hash))
           {
               memcpy(&spent_rng, &hash, sizeof(hash)); // a bit dodgy, should be other parse functions somewhere

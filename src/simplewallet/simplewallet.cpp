@@ -4238,7 +4238,7 @@ boost::optional<tools::password_container> simple_wallet::get_and_verify_passwor
 }
 //----------------------------------------------------------------------------------------------------
 boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::program_options::variables_map& vm,
-  const crypto::rand_seed & recovery_key, bool recover, bool two_random, const std::string &old_language)
+  const crypto::rand_key & recovery_key, bool recover, bool two_random, const std::string &old_language)
 {
   auto rc = tools::wallet2::make_new(vm, false, password_prompter);
   m_wallet = std::move(rc.first);
@@ -4289,7 +4289,7 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
 
   bool create_address_file = command_line::get_arg(vm, arg_create_address_file);
 
-  crypto::rand_seed recovery_val;
+  crypto::rand_key recovery_val;
   try
   {
     recovery_val = m_wallet->generate(m_wallet_file, std::move(rc.second).password(), recovery_key, recover, two_random, create_address_file);

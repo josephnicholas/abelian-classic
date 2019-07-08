@@ -290,7 +290,7 @@ private:
 
       tx_scan_info_t(): amount(0), money_transfered(0), error(true) {}
       // Random bytes
-      crypto::pq_seed random;
+      crypto::random_key random;
     };
 
     struct transfer_details
@@ -323,8 +323,8 @@ private:
       //RNG
       bool m_rng_key_known;
       bool m_rng_key_partial;
-      crypto::pq_seed m_rng_key;
-      const crypto::pq_seed &get_rng_key() const {return boost::get<const crypto::pq_seed>(m_tx.vout[m_internal_output_index].random);}
+      crypto::random_key m_rng_key;
+      const crypto::random_key &get_rng_key() const {return boost::get<const crypto::random_key>(m_tx.vout[m_internal_output_index].random);}
 
       BEGIN_SERIALIZE_OBJECT()
         FIELD(m_block_height)
@@ -390,7 +390,7 @@ private:
       uint64_t m_timestamp;
       uint32_t m_subaddr_account;   // subaddress account of your wallet to be used in this transfer
       std::set<uint32_t> m_subaddr_indices;  // set of address indices used as inputs in this transfer
-      std::vector<std::pair<crypto::pq_seed, std::vector<uint64_t>>> m_rings; // relative - change in RNG
+      std::vector<std::pair<crypto::random_key, std::vector<uint64_t>>> m_rings; // relative - change in RNG
     };
 
     struct confirmed_transfer_details
@@ -405,7 +405,7 @@ private:
       uint64_t m_unlock_time;
       uint32_t m_subaddr_account;   // subaddress account of your wallet to be used in this transfer
       std::set<uint32_t> m_subaddr_indices;  // set of address indices used as inputs in this transfer
-      std::vector<std::pair<crypto::pq_seed, std::vector<uint64_t>>> m_rings; // relative - change in RNG
+      std::vector<std::pair<crypto::random_key, std::vector<uint64_t>>> m_rings; // relative - change in RNG
 
       confirmed_transfer_details(): m_amount_in(0), m_amount_out(0), m_change((uint64_t)-1), m_block_height(0), m_payment_id(crypto::null_hash), m_timestamp(0), m_unlock_time(0), m_subaddr_account((uint32_t)-1) {}
       confirmed_transfer_details(const unconfirmed_transfer_details &utd, uint64_t height):
@@ -552,7 +552,7 @@ private:
       crypto::key_image key_image;
       crypto::signature shared_secret_sig;
       crypto::signature key_image_sig;
-      crypto::pq_seed rng;
+      crypto::random_key rng;
     };
 
     typedef std::tuple<uint64_t, crypto::public_key, rct::key> get_outs_entry;
@@ -602,8 +602,8 @@ private:
      * \param  create_address_file  Whether to create an address file
      * \return                      The secret key of the generated wallet
      */
-    crypto::rand_seed generate(const std::string& wallet, const epee::wipeable_string& password,
-      const crypto::rand_seed& recovery_param = crypto::rand_seed(), bool recover = false,
+    crypto::rand_key generate(const std::string& wallet, const epee::wipeable_string& password,
+      const crypto::rand_key& recovery_param = crypto::rand_key(), bool recover = false,
       bool two_random = false, bool create_address_file = false);
     /*!
      * \brief Creates a wallet from a public address and a spend/view secret key pair.
@@ -1299,10 +1299,10 @@ private:
     bool find_and_save_rings(bool force = true);
 
     // Random keys implementation for RingDB
-    bool get_ring(const crypto::pq_seed &rand_key, std::vector<uint64_t> &outs);
-    bool get_ring(const crypto::chacha_key &key, const crypto::pq_seed &rand_key, std::vector<uint64_t> &outs);
-    bool get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::pq_seed, std::vector<uint64_t>>> &outs);
-    bool set_ring(const crypto::pq_seed &rand_key, const std::vector<uint64_t> &outs, bool relative);
+    bool get_ring(const crypto::random_key &rand_key, std::vector<uint64_t> &outs);
+    bool get_ring(const crypto::chacha_key &key, const crypto::random_key &rand_key, std::vector<uint64_t> &outs);
+    bool get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::random_key, std::vector<uint64_t>>> &outs);
+    bool set_ring(const crypto::random_key &rand_key, const std::vector<uint64_t> &outs, bool relative);
 
     bool blackball_output(const std::pair<uint64_t, uint64_t> &output);
     bool set_blackballed_outputs(const std::vector<std::pair<uint64_t, uint64_t>> &outputs, bool add = false);
@@ -1457,7 +1457,7 @@ private:
     std::unordered_map<crypto::key_image, size_t> m_key_images;
     std::unordered_map<crypto::public_key, size_t> m_pub_keys;
     // Add an additional field for rand ID checking.
-    std::unordered_map<crypto::pq_seed, size_t> m_tx_rng;
+    std::unordered_map<crypto::random_key, size_t> m_tx_rng;
     cryptonote::account_public_address m_account_public_address;
     std::unordered_map<crypto::public_key, cryptonote::subaddress_index> m_subaddresses;
     std::vector<std::vector<std::string>> m_subaddress_labels;

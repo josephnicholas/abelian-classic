@@ -448,7 +448,7 @@ BEGIN_RPC_MESSAGE_CLASS(RNGSpent);
     RNG_SPENT_IN_POOL = 2,
   };
   BEGIN_RPC_MESSAGE_REQUEST;
-    RPC_MESSAGE_MEMBER(std::vector<crypto::pq_seed>, rngs);
+    RPC_MESSAGE_MEMBER(std::vector<crypto::random_key>, rngs);
   END_RPC_MESSAGE_REQUEST;
   BEGIN_RPC_MESSAGE_RESPONSE;
     RPC_MESSAGE_MEMBER(std::vector<uint64_t>, rng_spent_status);

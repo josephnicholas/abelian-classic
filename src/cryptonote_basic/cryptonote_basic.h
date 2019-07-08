@@ -126,7 +126,7 @@ namespace cryptonote
     crypto::key_image k_image;      // double spending protection TODO
 
     // Add a RNG field in input.
-    crypto::pq_seed random;
+    crypto::random_key random;
 
     BEGIN_SERIALIZE_OBJECT()
       VARINT_FIELD(amount)
@@ -146,7 +146,7 @@ namespace cryptonote
   {
     uint64_t amount;
     txout_target_v target;
-    crypto::pq_seed random;
+    crypto::random_key random;
 
     BEGIN_SERIALIZE_OBJECT()
       VARINT_FIELD(amount)
@@ -466,7 +466,7 @@ namespace cryptonote
   {
     crypto::public_key pub;
     crypto::secret_key sec;
-    crypto::rand_seed seed;
+    crypto::rand_key seed;
 
     static inline keypair generate(hw::device &hwdev)
     {

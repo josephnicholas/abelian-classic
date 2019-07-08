@@ -1019,6 +1019,12 @@ set(ENABLE_PRUNING 0)
 # Disable multisig
 set(ENABLE_MULTISIG 0)
 
+# Set Dilithium experimental override
+set(DILITHIUM_CRYPTO 1)
+if(DILITHIUM_CRYPTO)
+  add_definitions("-DNDILITHIUM_CRYPTO")
+endif()
+
 if(ENABLE_MULTISIG)
   message(STATUS "Multisig Enabled")
   add_definitions("-DENABLE_MULTISIG")

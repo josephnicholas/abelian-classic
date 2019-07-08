@@ -1014,7 +1014,7 @@ bool t_rpc_command_executor::is_key_image_spent(const crypto::key_image &ki) {
   return true;
 }
 
-bool t_rpc_command_executor::is_rng_spent(const crypto::pq_seed &rng) {
+bool t_rpc_command_executor::is_rng_spent(const crypto::random_key &rng) {
     cryptonote::COMMAND_RPC_IS_RNG_SPENT::request req;
     cryptonote::COMMAND_RPC_IS_RNG_SPENT::response res;
 
@@ -1078,7 +1078,7 @@ bool t_rpc_command_executor::print_transaction_pool_long() {
   }
   if (! res.transactions.empty())
   {
-    const time_t now = time(NULL);
+    const time_t now = time(nullptr);
     tools::msg_writer() << "Transactions: ";
     for (auto & tx_info : res.transactions)
     {
@@ -1114,7 +1114,7 @@ bool t_rpc_command_executor::print_transaction_pool_long() {
       {
         tools::msg_writer() << "  tx: " << kinfo.txs_hashes[0];
       }
-      else if (kinfo.txs_hashes.size() == 0)
+      else if (kinfo.txs_hashes.empty())
       {
         tools::msg_writer() << "  WARNING: spent key image has no txs associated";
       }
@@ -1164,7 +1164,7 @@ bool t_rpc_command_executor::print_transaction_pool_short() {
   }
   else
   {
-    const time_t now = time(NULL);
+    const time_t now = time(nullptr);
     for (auto & tx_info : res.transactions)
     {
       tools::msg_writer() << "id: " << tx_info.id_hash << std::endl

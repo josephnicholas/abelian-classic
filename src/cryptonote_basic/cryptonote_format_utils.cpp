@@ -1373,7 +1373,7 @@ namespace cryptonote
     block_hashes_cached = block_hashes_cached_count;
   }
   //---------------------------------------------------------------
-  crypto::rand_seed encrypt_key(const crypto::rand_seed &key, const epee::wipeable_string &passphrase)
+  crypto::rand_key encrypt_key(const crypto::rand_key &key, const epee::wipeable_string &passphrase)
   {
     crypto::hash hash;
     crypto::cn_slow_hash(passphrase.data(), passphrase.size(), hash);
@@ -1381,7 +1381,7 @@ namespace cryptonote
     return key;
   }
   //---------------------------------------------------------------
-  crypto::rand_seed decrypt_key(const crypto::rand_seed &key, const epee::wipeable_string &passphrase)
+  crypto::rand_key decrypt_key(const crypto::rand_key &key, const epee::wipeable_string &passphrase)
   {
     crypto::hash hash;
     crypto::cn_slow_hash(passphrase.data(), passphrase.size(), hash);

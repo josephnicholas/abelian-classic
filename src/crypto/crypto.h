@@ -60,18 +60,18 @@ namespace crypto {
       char data[CRYPTO_SECRETKEYBYTES]; // We need to agree on this!
   };
 
-  // Randomness data type
-  POD_CLASS pq_seed {
-        char data[32U]; // We need to agree on this!
-  };
-
   POD_CLASS public_key: ec_point {
     friend class crypto_ops;
   };
 
+  // Randomness data type
+  POD_CLASS random_key {
+      char data[32U]; // We need to agree on this!
+  };
+
   using secret_key = epee::mlocked<tools::scrubbed<ec_scalar>>;
 
-  using rand_seed = epee::mlocked<tools::scrubbed<pq_seed>>;
+  using rand_key = epee::mlocked<tools::scrubbed<random_key>>;
 
   POD_CLASS public_keyV {
     std::vector<public_key> keys;
@@ -118,8 +118,8 @@ namespace crypto {
     void operator=(const crypto_ops &);
     ~crypto_ops();
 
-    static rand_seed generate_keys(public_key &pub, secret_key &sec, const rand_seed& recovery_key = rand_seed(), bool recover = false);
-    friend rand_seed generate_keys(public_key &pub, secret_key &sec, const rand_seed& recovery_key, bool recover);
+    static rand_key generate_keys(public_key &pub, secret_key &sec, const rand_key& recovery_key = rand_key(), bool recover = false);
+    friend rand_key generate_keys(public_key &pub, secret_key &sec, const rand_key& recovery_key, bool recover);
     static bool check_key(const public_key &);
     friend bool check_key(const public_key &);
     static bool secret_key_to_public_key(const secret_key &, public_key &);
@@ -199,7 +199,7 @@ namespace crypto {
 
   /* Generate a new key pair
    */
-  inline rand_seed generate_keys(public_key &pub, secret_key &sec, const rand_seed& recovery_key = rand_seed(), bool recover = false) {
+  inline rand_key generate_keys(public_key &pub, secret_key &sec, const rand_key& recovery_key = rand_key(), bool recover = false) {
     return crypto_ops::generate_keys(pub, sec, recovery_key, recover);
   }
 
@@ -317,5 +317,5 @@ namespace crypto {
 CRYPTO_MAKE_HASHABLE(public_key)
 CRYPTO_MAKE_HASHABLE_CONSTANT_TIME(secret_key)
 CRYPTO_MAKE_HASHABLE(key_image)
-CRYPTO_MAKE_HASHABLE(pq_seed)
+CRYPTO_MAKE_HASHABLE(random_key)
 CRYPTO_MAKE_COMPARABLE(signature)

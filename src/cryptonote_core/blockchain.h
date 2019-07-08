@@ -282,7 +282,7 @@ namespace cryptonote
     bool have_tx_keyimg_as_spent(const crypto::key_image &key_im) const;
 
     // RNG
-    bool have_tx_rng_as_spent(const crypto::pq_seed &rng) const;
+    bool have_tx_rng_as_spent(const crypto::random_key &rng) const;
 
     /**
      * @brief get the current height of the blockchain
@@ -1024,7 +1024,7 @@ namespace cryptonote
     typedef std::unordered_set<crypto::key_image> key_images_container;
 
     // RNG
-    typedef std::unordered_set<crypto::pq_seed> rng_container;
+    typedef std::unordered_set<crypto::random_key> rng_container;
 
     typedef std::vector<block_extended_info> blocks_container;
 

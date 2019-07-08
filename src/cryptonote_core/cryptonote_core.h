@@ -713,7 +713,7 @@ namespace cryptonote
      bool is_key_image_spent(const crypto::key_image& key_im) const;
 
      // RNG
-     bool is_rng_spent(const crypto::pq_seed& rng) const;
+     bool is_rng_spent(const crypto::random_key& rng) const;
 
      /**
       * @brief check if multiple key images are spent
@@ -730,7 +730,7 @@ namespace cryptonote
      /**
       * RNG handler for are_key_images_spent
       */
-     bool are_rngs_spent(const std::vector<crypto::pq_seed>& rng, std::vector<bool> &spent) const;
+     bool are_rngs_spent(const std::vector<crypto::random_key>& rng, std::vector<bool> &spent) const;
 
      /**
       * @brief check if multiple key images are spent in the transaction pool
@@ -745,7 +745,7 @@ namespace cryptonote
      /**
       * RNG implementation of are_key_images_spent_in_pool
       */
-      bool are_rngs_spent_in_pool(const std::vector<crypto::pq_seed>& rngs, std::vector<bool> &spent) const;
+      bool are_rngs_spent_in_pool(const std::vector<crypto::random_key>& rngs, std::vector<bool> &spent) const;
 
      /**
       * @brief get the number of blocks to sync in one go

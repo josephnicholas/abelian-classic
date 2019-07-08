@@ -113,7 +113,7 @@ namespace crypto {
     sc_reduce32(bytes);
   }
   /* generate a random 32-byte (256-bit) integer and copy it to res */
-  static inline void random_scalar(pq_seed &res) {
+  static inline void random_scalar(random_key &res) {
   	random32_unbiased((unsigned char*)res.data);
   }
 
@@ -122,9 +122,9 @@ namespace crypto {
     sc_reduce32(&res);
   }
 
-  rand_seed crypto_ops::generate_keys(public_key &pub, secret_key &sec, const rand_seed& recovery_key, bool recover) {
+  rand_key crypto_ops::generate_keys(public_key &pub, secret_key &sec, const rand_key& recovery_key, bool recover) {
     LOG_PRINT_L1("crypto_ops " <<__func__);
-    rand_seed rng;
+    rand_key rng;
 
     unsigned char pk[CRYPTO_PUBLICKEYBYTES];
     unsigned char sk[CRYPTO_SECRETKEYBYTES];

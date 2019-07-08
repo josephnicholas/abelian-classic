@@ -586,7 +586,7 @@ std::pair<std::unique_ptr<tools::wallet2>, tools::password_container> generate_f
 
     GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, seed, std::string, String, false, std::string());
     std::string old_language;
-    crypto::rand_seed recovery_key;
+    crypto::rand_key recovery_key;
     bool restore_deterministic_wallet = false;
     if (field_seed_found)
     {
@@ -1269,8 +1269,8 @@ bool wallet2::init(std::string daemon_address, boost::optional<epee::net_utils::
 //----------------------------------------------------------------------------------------------------
 bool wallet2::is_deterministic() const
 {
-  crypto::rand_seed second;
-  keccak((uint8_t *)&get_account().get_keys().m_spend_secret_key, sizeof(crypto::secret_key), (uint8_t *)&second, sizeof(crypto::rand_seed));
+  crypto::rand_key second;
+  keccak((uint8_t *)&get_account().get_keys().m_spend_secret_key, sizeof(crypto::secret_key), (uint8_t *)&second, sizeof(crypto::rand_key));
   //sc_reduce32((uint8_t *)&second);
   //return memcmp(second.data, get_account().get_keys().m_view_secret_key.data, sizeof(crypto::secret_key)) == 0;
   return true;
@@ -1291,7 +1291,7 @@ bool wallet2::get_seed(epee::wipeable_string& electrum_words, const epee::wipeab
   }
 
   //crypto::secret_key key = get_account().get_keys().m_spend_secret_key;
-  crypto::rand_seed rand_key = get_account().get_keys().m_random_generate_key;
+  crypto::rand_key rand_key = get_account().get_keys().m_random_generate_key;
   if (!passphrase.empty())
       rand_key = cryptonote::encrypt_key(rand_key, passphrase);
   if (!crypto::ElectrumWords::bytes_to_words(rand_key, electrum_words, seed_language))
@@ -1701,7 +1701,7 @@ void wallet2::scan_output(const cryptonote::transaction &tx, bool miner_tx, cons
   }
 
   // Add random number generator from tx
-  tx_scan_info.random = boost::get<crypto::pq_seed>(tx.vout[i].random);
+  tx_scan_info.random = boost::get<crypto::random_key>(tx.vout[i].random);
 
   THROW_WALLET_EXCEPTION_IF(std::find(outs.begin(), outs.end(), i) != outs.end(), error::wallet_internal_error, "Same output cannot be added twice");
   if (tx_scan_info.money_transfered == 0 && !miner_tx)
@@ -4404,8 +4404,8 @@ void wallet2::generate(const std::string& wallet_, const epee::wipeable_string& 
  * \param  create_address_file     Whether to create an address file
  * \return                         The secret key of the generated wallet
  */
-crypto::rand_seed wallet2::generate(const std::string& wallet_, const epee::wipeable_string& password,
-  const crypto::rand_seed& recovery_param, bool recover, bool two_random, bool create_address_file)
+crypto::rand_key wallet2::generate(const std::string& wallet_, const epee::wipeable_string& password,
+  const crypto::rand_key& recovery_param, bool recover, bool two_random, bool create_address_file)
 {
   clear();
   prepare_file_names(wallet_);
@@ -4417,7 +4417,7 @@ crypto::rand_seed wallet2::generate(const std::string& wallet_, const epee::wipe
     THROW_WALLET_EXCEPTION_IF(boost::filesystem::exists(m_keys_file,   ignored_ec), error::file_exists, m_keys_file);
   }
 
-  crypto::rand_seed retval = m_account.generate(recovery_param, recover, two_random);
+  crypto::rand_key retval = m_account.generate(recovery_param, recover, two_random);
 
   init_type(hw::device::device_type::SOFTWARE);
   // Dilithium random 32 byte seed
@@ -7390,7 +7390,7 @@ bool wallet2::find_and_save_rings(bool force)
 }
 
 // Random keys implementation for RingDB
-bool wallet2::get_ring(const crypto::chacha_key &key, const crypto::pq_seed &rand_key, std::vector<uint64_t> &outs)
+bool wallet2::get_ring(const crypto::chacha_key &key, const crypto::random_key &rand_key, std::vector<uint64_t> &outs)
 {
   if (!m_ringdb)
     return false;
@@ -7398,7 +7398,7 @@ bool wallet2::get_ring(const crypto::chacha_key &key, const crypto::pq_seed &ran
   catch (const std::exception &e) { return false; }
 }
 
-bool wallet2::get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::pq_seed, std::vector<uint64_t>>> &outs)
+bool wallet2::get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::random_key, std::vector<uint64_t>>> &outs)
 {
   for (auto i: m_confirmed_txs)
   {
@@ -7421,13 +7421,13 @@ bool wallet2::get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::
   return false;
 }
 
-bool wallet2::get_ring(const crypto::pq_seed &rand_key, std::vector<uint64_t> &outs)
+bool wallet2::get_ring(const crypto::random_key &rand_key, std::vector<uint64_t> &outs)
 {
   try { return get_ring(get_ringdb_key(), rand_key, outs); }
   catch (const std::exception &e) { return false; }
 }
 
-bool wallet2::set_ring(const crypto::pq_seed &rand_key, const std::vector<uint64_t> &outs, bool relative)
+bool wallet2::set_ring(const crypto::random_key &rand_key, const std::vector<uint64_t> &outs, bool relative)
 {
   if (!m_ringdb)
     return false;

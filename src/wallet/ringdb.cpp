@@ -110,7 +110,7 @@ static crypto::chacha_iv make_iv(const crypto::key_image &key_image, const crypt
 }
 
 // Random key implementation, since we can always have the key image in the DB.
-static crypto::chacha_iv make_iv(const crypto::pq_seed &rand_key, const crypto::chacha_key &key)
+static crypto::chacha_iv make_iv(const crypto::random_key &rand_key, const crypto::chacha_key &key)
 {
   static const char salt[] = "ringsdb";
 
@@ -126,7 +126,7 @@ static crypto::chacha_iv make_iv(const crypto::pq_seed &rand_key, const crypto::
   return iv;
 }
 
-static std::string encrypt(const std::string &plaintext, const crypto::pq_seed &rand_key, const crypto::chacha_key &key)
+static std::string encrypt(const std::string &plaintext, const crypto::random_key &rand_key, const crypto::chacha_key &key)
 {
   const crypto::chacha_iv iv = make_iv(rand_key, key);
   std::string ciphertext;
@@ -136,12 +136,12 @@ static std::string encrypt(const std::string &plaintext, const crypto::pq_seed &
   return ciphertext;
 }
 
-static std::string encrypt(const crypto::pq_seed &rand_key, const crypto::chacha_key &key)
+static std::string encrypt(const crypto::random_key &rand_key, const crypto::chacha_key &key)
 {
   return encrypt(std::string((const char*)&rand_key, sizeof(rand_key)), rand_key, key);
 }
 
-static std::string decrypt(const std::string &ciphertext, const crypto::pq_seed &rand_key, const crypto::chacha_key &key)
+static std::string decrypt(const std::string &ciphertext, const crypto::random_key &rand_key, const crypto::chacha_key &key)
 {
   const crypto::chacha_iv iv = make_iv(rand_key, key);
   std::string plaintext;
@@ -151,7 +151,7 @@ static std::string decrypt(const std::string &ciphertext, const crypto::pq_seed 
   return plaintext;
 }
 
-static void store_relative_ring(MDB_txn *txn, MDB_dbi &dbi, const crypto::pq_seed &rand_key, const std::vector<uint64_t> &relative_ring, const crypto::chacha_key &chacha_key)
+static void store_relative_ring(MDB_txn *txn, MDB_dbi &dbi, const crypto::random_key &rand_key, const std::vector<uint64_t> &relative_ring, const crypto::chacha_key &chacha_key)
 {
   MDB_val key, data;
   std::string key_ciphertext = encrypt(rand_key, chacha_key);
@@ -550,7 +550,7 @@ bool ringdb::clear_blackballs()
 }
 
 // Random key implementation - experimental
-bool ringdb::get_ring(const crypto::chacha_key &chacha_key, const crypto::pq_seed &rand_key, std::vector<uint64_t> &outs)
+bool ringdb::get_ring(const crypto::chacha_key &chacha_key, const crypto::random_key &rand_key, std::vector<uint64_t> &outs)
 {
   MDB_txn *txn;
   int dbr;
@@ -586,7 +586,7 @@ bool ringdb::get_ring(const crypto::chacha_key &chacha_key, const crypto::pq_see
   return true;
 }
 
-bool ringdb::set_ring(const crypto::chacha_key &chacha_key, const crypto::pq_seed &rand_key, const std::vector<uint64_t> &outs, bool relative)
+bool ringdb::set_ring(const crypto::chacha_key &chacha_key, const crypto::random_key &rand_key, const std::vector<uint64_t> &outs, bool relative)
 {
   MDB_txn *txn;
   int dbr;

@@ -294,7 +294,7 @@ bool t_command_parser_executor::is_rng_spent(const std::vector<std::string>& arg
     }
 
     const std::string& str = args.front();
-    crypto::pq_seed rng;
+    crypto::random_key rng;
     crypto::hash hash;
     if (parse_hash256(str, hash))
     {

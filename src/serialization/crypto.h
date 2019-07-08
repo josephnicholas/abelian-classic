@@ -84,7 +84,7 @@ BLOB_SERIALIZER(crypto::public_key);
 BLOB_SERIALIZER(crypto::secret_key);
 BLOB_SERIALIZER(crypto::key_derivation);
 BLOB_SERIALIZER(crypto::key_image);
-BLOB_SERIALIZER(crypto::pq_seed);
+BLOB_SERIALIZER(crypto::random_key);
 BLOB_SERIALIZER(crypto::signature);
 VARIANT_TAG(debug_archive, crypto::hash, "hash");
 VARIANT_TAG(debug_archive, crypto::hash8, "hash8");
@@ -92,6 +92,6 @@ VARIANT_TAG(debug_archive, crypto::public_key, "public_key");
 VARIANT_TAG(debug_archive, crypto::secret_key, "secret_key");
 VARIANT_TAG(debug_archive, crypto::key_derivation, "key_derivation");
 VARIANT_TAG(debug_archive, crypto::key_image, "key_image");
-VARIANT_TAG(debug_archive, crypto::pq_seed, "pq_seed");
+VARIANT_TAG(debug_archive, crypto::random_key, "pq_seed");
 VARIANT_TAG(debug_archive, crypto::signature, "signature");
 

@@ -1041,7 +1041,7 @@ namespace cryptonote
     return true;
   }
   //RNG------------------------------------------------------------------------------
-  bool tx_memory_pool::check_for_rngs(const std::vector<crypto::pq_seed>& rng, std::vector<bool> spent) const
+  bool tx_memory_pool::check_for_rngs(const std::vector<crypto::random_key>& rng, std::vector<bool> spent) const
   {
     CRITICAL_REGION_LOCAL(m_transactions_lock);
     CRITICAL_REGION_LOCAL1(m_blockchain);
@@ -1131,7 +1131,7 @@ namespace cryptonote
       return false;
   }
   //RNG------------------------------------------------------------------------------
-  bool tx_memory_pool::have_tx_rng_as_spent(const crypto::pq_seed &rng) const
+  bool tx_memory_pool::have_tx_rng_as_spent(const crypto::random_key &rng) const
   {
     LOG_PRINT_L1("tx_memory_pool::" << __func__);
     CRITICAL_REGION_LOCAL(m_transactions_lock);
@@ -1253,7 +1253,7 @@ namespace cryptonote
     return false;
   }
   //RNG------------------------------------------------------------------------------
-  bool tx_memory_pool::have_rngs(const std::unordered_set<crypto::pq_seed>& rng, const transaction& tx)
+  bool tx_memory_pool::have_rngs(const std::unordered_set<crypto::random_key>& rng, const transaction& tx)
   {
     LOG_PRINT_L1("tx_memory_pool::" << __func__);
     for(size_t i = 0; i!= tx.vin.size(); i++)
@@ -1265,7 +1265,7 @@ namespace cryptonote
     return false;
   }
   //---------------------------------------------------------------------------------
-  bool tx_memory_pool::append_rngs(std::unordered_set<crypto::pq_seed>& rng, const transaction& tx)
+  bool tx_memory_pool::append_rngs(std::unordered_set<crypto::random_key>& rng, const transaction& tx)
   {
     LOG_PRINT_L1("tx_memory_pool::" << __func__);
     // TODO: Experimental, instead of checking the Ki in set, try checking with RNG.
@@ -1432,7 +1432,7 @@ namespace cryptonote
     std::vector<crypto::key_image> k_images;
 
     //RNG Specific
-    std::unordered_set<crypto::pq_seed> rng;
+    std::unordered_set<crypto::random_key> rng;
 
 
     LOG_PRINT_L2("Filling block template, median weight " << median_weight << ", " << m_txs_by_fee_and_receive_time.size() << " txes in the pool");

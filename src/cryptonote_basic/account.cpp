@@ -157,18 +157,18 @@ DISABLE_VS_WARNINGS(4244 4345)
     m_keys.m_multisig_keys.clear();
   }
   //-----------------------------------------------------------------
-  crypto::rand_seed  account_base::generate(const crypto::rand_seed & recovery_key, bool recover, bool two_random)
+  crypto::rand_key  account_base::generate(const crypto::rand_key & recovery_key, bool recover, bool two_random)
   {
-    crypto::rand_seed  first = generate_keys(m_keys.m_account_address.m_spend_public_key, m_keys.m_spend_secret_key, recovery_key, recover);
+    crypto::rand_key  first = generate_keys(m_keys.m_account_address.m_spend_public_key, m_keys.m_spend_secret_key, recovery_key, recover);
 
     // Sample compression of public keys.
-    crypto::rand_seed pubKeySample;
-    shake256((uint8_t *)&pubKeySample, sizeof(crypto::rand_seed), (uint8_t *)&m_keys.m_account_address.m_spend_public_key, sizeof(crypto::public_key));
+    crypto::rand_key pubKeySample;
+    shake256((uint8_t *)&pubKeySample, sizeof(crypto::rand_key), (uint8_t *)&m_keys.m_account_address.m_spend_public_key, sizeof(crypto::public_key));
 
     // rng for generating second set of keys is hash of first rng.  means only one set of electrum-style words needed for recovery
-    crypto::rand_seed  second;
+    crypto::rand_key  second;
 
-    keccak((uint8_t *)&m_keys.m_spend_secret_key, sizeof(crypto::secret_key), (uint8_t *)&second, sizeof(crypto::rand_seed));
+    keccak((uint8_t *)&m_keys.m_spend_secret_key, sizeof(crypto::secret_key), (uint8_t *)&second, sizeof(crypto::rand_key));
     generate_keys(m_keys.m_account_address.m_view_public_key, m_keys.m_view_secret_key, second, two_random ? false : true);
 
     struct tm timestamp = {0};

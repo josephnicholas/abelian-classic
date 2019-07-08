@@ -101,7 +101,7 @@ public:
 
   bool is_key_image_spent(const crypto::key_image &ki);
 
-  bool is_rng_spent(const crypto::pq_seed &rng);
+  bool is_rng_spent(const crypto::random_key &rng);
 
   bool print_transaction_pool_long();
 

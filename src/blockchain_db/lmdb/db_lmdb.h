@@ -282,7 +282,7 @@ public:
 
   virtual void add_txpool_tx(const crypto::hash &txid, const cryptonote::blobdata &blob, const txpool_tx_meta_t& meta);
   //RNG
-  virtual bool has_spent_rng(const crypto::pq_seed& rng) const;
+  virtual bool has_spent_rng(const crypto::random_key& rng) const;
 
   virtual void update_txpool_tx(const crypto::hash &txid, const txpool_tx_meta_t& meta);
   virtual uint64_t get_txpool_tx_count(bool include_unrelayed_txes = true) const;
@@ -301,7 +301,7 @@ public:
   virtual bool for_all_key_images(std::function<bool(const crypto::key_image&)>) const;
 
   // RNG
-  virtual bool for_all_rng(std::function<bool(const crypto::pq_seed&)>) const;
+  virtual bool for_all_rng(std::function<bool(const crypto::random_key&)>) const;
 
   virtual bool for_blocks_range(const uint64_t& h1, const uint64_t& h2, std::function<bool(uint64_t, const crypto::hash&, const cryptonote::block&)>) const;
   virtual bool for_all_transactions(std::function<bool(const crypto::hash&, const cryptonote::transaction&)>, bool pruned) const;
@@ -395,11 +395,11 @@ private:
 
   virtual void add_spent_key(const crypto::key_image& k_image);
 
-  virtual void add_spent_rng(const crypto::pq_seed& rand);
+  virtual void add_spent_rng(const crypto::random_key& rand);
 
   virtual void remove_spent_key(const crypto::key_image& k_image);
 
-  virtual void remove_spent_rng(const crypto::pq_seed& rand);
+  virtual void remove_spent_rng(const crypto::random_key& rand);
 
   uint64_t num_outputs() const;
 

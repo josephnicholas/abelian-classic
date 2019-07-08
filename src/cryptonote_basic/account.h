@@ -50,7 +50,7 @@ namespace cryptonote
      *
      * Purpose: Public key and output tx key generation.
     */
-    crypto::rand_seed m_random_generate_key;
+    crypto::rand_key m_random_generate_key;
 
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(m_account_address)
@@ -83,7 +83,7 @@ namespace cryptonote
   {
   public:
     account_base();
-    crypto::rand_seed  generate(const crypto::rand_seed & recovery_key = crypto::rand_seed (), bool recover = false, bool two_random = false);
+    crypto::rand_key  generate(const crypto::rand_key & recovery_key = crypto::rand_key (), bool recover = false, bool two_random = false);
     void create_from_device(const std::string &device_name);
     void create_from_device(hw::device &hwdev);
     void create_from_keys(const cryptonote::account_public_address& address, const crypto::secret_key& spendkey, const crypto::secret_key& viewkey);
@@ -112,7 +112,7 @@ namespace cryptonote
     void encrypt_viewkey(const crypto::chacha_key &key) { m_keys.encrypt_viewkey(key); }
     void decrypt_viewkey(const crypto::chacha_key &key) { m_keys.decrypt_viewkey(key); }
 
-    void save_randomness(const crypto::rand_seed &randomness) { m_keys.m_random_generate_key = randomness; }
+    void save_randomness(const crypto::rand_key &randomness) { m_keys.m_random_generate_key = randomness; }
 
     template <class t_archive>
     inline void serialize(t_archive &a, const unsigned int /*ver*/)

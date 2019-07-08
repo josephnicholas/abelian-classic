@@ -1113,12 +1113,12 @@ namespace cryptonote
     return m_blockchain_storage.have_tx_keyimg_as_spent(key_image);
   }
   //RNG--------------------------------------------------------------------------------------------
-  bool core::is_rng_spent(const crypto::pq_seed &rng) const
+  bool core::is_rng_spent(const crypto::random_key &rng) const
   {
     return m_blockchain_storage.have_tx_rng_as_spent(rng);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::are_rngs_spent(const std::vector<crypto::pq_seed>& rng, std::vector<bool> &spent) const
+  bool core::are_rngs_spent(const std::vector<crypto::random_key>& rng, std::vector<bool> &spent) const
   {
     spent.clear();
     for(auto& r: rng)
@@ -1155,7 +1155,7 @@ namespace cryptonote
     return m_mempool.check_for_key_images(key_im, spent);
   }
   //RNG--------------------------------------------------------------------------------------------
-  bool core::are_rngs_spent_in_pool(const std::vector<crypto::pq_seed>& rngs, std::vector<bool> &spent) const
+  bool core::are_rngs_spent_in_pool(const std::vector<crypto::random_key>& rngs, std::vector<bool> &spent) const
   {
     spent.clear();
 
@@ -1204,7 +1204,7 @@ namespace cryptonote
   //RNG--------------------------------------------------------------------------------------------
   bool core::check_tx_inputs_rng_diff(const transaction& tx) const
   {
-    std::unordered_set<crypto::pq_seed> rng;
+    std::unordered_set<crypto::random_key> rng;
     for(const auto& in: tx.vin)
     {
       CHECKED_GET_SPECIFIC_VARIANT(in, const txin_to_key, tokey_in, false);

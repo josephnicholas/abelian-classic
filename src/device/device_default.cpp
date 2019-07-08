@@ -242,7 +242,7 @@ namespace hw {
             return true;
         }
 
-        crypto::rand_seed  device_default::generate_keys(crypto::public_key &pub, crypto::secret_key &sec, const crypto::rand_seed & recovery_key, bool recover) {
+        crypto::rand_key  device_default::generate_keys(crypto::public_key &pub, crypto::secret_key &sec, const crypto::rand_key & recovery_key, bool recover) {
             return crypto::generate_keys(pub, sec, recovery_key, recover);
         }
 
