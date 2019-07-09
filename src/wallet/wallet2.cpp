@@ -3468,20 +3468,20 @@ void wallet2::detach_blockchain(uint64_t height, std::map<std::pair<uint64_t, ui
   size_t blocks_detached = m_blockchain.size() - height;
   m_blockchain.crop(height);
 
-  for (auto it = m_payments.begin(); it != m_payments.end(); )
+  for (auto paymentsIt = m_payments.begin(); paymentsIt != m_payments.end(); )
   {
-    if(height <= it->second.m_block_height)
-      it = m_payments.erase(it);
+    if(height <= paymentsIt->second.m_block_height)
+      paymentsIt = m_payments.erase(paymentsIt);
     else
-      ++it;
+      ++paymentsIt;
   }
 
-  for (auto it = m_confirmed_txs.begin(); it != m_confirmed_txs.end(); )
+  for (auto ctxIt = m_confirmed_txs.begin(); ctxIt != m_confirmed_txs.end(); )
   {
-    if(height <= it->second.m_block_height)
-      it = m_confirmed_txs.erase(it);
+    if(height <= ctxIt->second.m_block_height)
+      ctxIt = m_confirmed_txs.erase(ctxIt);
     else
-      ++it;
+      ++ctxIt;
   }
 
   LOG_PRINT_L0("Detached blockchain on height " << height << ", transfers detached " << transfers_detached << ", blocks detached " << blocks_detached);
