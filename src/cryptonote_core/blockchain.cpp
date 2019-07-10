@@ -3218,7 +3218,7 @@ void Blockchain::check_ring_signature(const crypto::hash &tx_prefix_hash, const 
   }
   // Dilithium - sig verification
   crypto::public_key k_i;
-  std::memcpy(&k_i, &key_image, CRYPTO_PUBLICKEYBYTES);
+  std::copy(key_image.buffer.begin(), key_image.buffer.end(), k_i.buffer.begin());
   auto ok = crypto::check_signature(tx_prefix_hash, k_i, *sig.data());
   result = ok ? 1 : 0;//crypto::check_ring_signature(tx_prefix_hash, key_image, p_output_keys, sig.data()) ? 1 : 0;
 }

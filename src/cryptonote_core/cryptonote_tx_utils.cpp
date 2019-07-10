@@ -334,7 +334,7 @@ namespace cryptonote
       crypto::key_image img;
 
       //Dilithium change
-      std::memcpy(&img, &sender_account_keys.m_account_address.m_spend_public_key, CRYPTO_PUBLICKEYBYTES);
+      std::copy(sender_account_keys.m_account_address.m_spend_public_key.buffer.begin(), sender_account_keys.m_account_address.m_spend_public_key.buffer.end(), img.buffer.begin());
       //const auto& out_key = reinterpret_cast<const crypto::public_key&>(src_entr.outputs[src_entr.real_output].second.dest);
       //if(!generate_key_image_helper(sender_account_keys, subaddresses, out_key, src_entr.real_out_tx_key, src_entr.real_out_additional_tx_keys, src_entr.real_output_in_tx_index, in_ephemeral,img, hwdev))
       //{
@@ -342,7 +342,7 @@ namespace cryptonote
       //  return false;
       //}
 
-      std::memcpy(&in_ephemeral.pub, &src_entr.outputs[src_entr.real_output].second, CRYPTO_PUBLICKEYBYTES);
+      std::copy(src_entr.outputs[src_entr.real_output].second.buffer.begin(), src_entr.outputs[src_entr.real_output].second.buffer.end(), in_ephemeral.pub.buffer.begin());
       //check that derivated key is equal with real output key (if non multisig)
       if(!msout && !(in_ephemeral.pub == src_entr.outputs[src_entr.real_output].second) )
       {
@@ -500,8 +500,8 @@ namespace cryptonote
             crypto::public_key pub;
             crypto::secret_key sec;
 
-            std::memcpy(&pub, &sender_account_keys.m_account_address.m_spend_public_key, CRYPTO_PUBLICKEYBYTES);
-            std::memcpy(&sec, &sender_account_keys.m_spend_secret_key, CRYPTO_SECRETKEYBYTES);
+            std::copy(sender_account_keys.m_account_address.m_spend_public_key.buffer.begin(), sender_account_keys.m_account_address.m_spend_public_key.buffer.end(), pub.buffer.begin());
+            std::copy(sender_account_keys.m_spend_secret_key.buffer.begin(), sender_account_keys.m_spend_secret_key.buffer.end(), sec.buffer.begin());
 
             crypto::generate_signature(tx_prefix_hash, pub, sec, *sigs.data());
         }
@@ -812,8 +812,8 @@ namespace cryptonote
                   crypto::public_key pub;
                   crypto::secret_key sec;
 
-                  std::memcpy(&pub, &sender_account_keys.m_account_address.m_spend_public_key, CRYPTO_PUBLICKEYBYTES);
-                  std::memcpy(&sec, &sender_account_keys.m_spend_secret_key, CRYPTO_SECRETKEYBYTES);
+                  std::copy(sender_account_keys.m_account_address.m_spend_public_key.buffer.begin(), sender_account_keys.m_account_address.m_spend_public_key.buffer.end(), pub.buffer.begin());
+                  std::copy(sender_account_keys.m_spend_secret_key.buffer.begin(), sender_account_keys.m_spend_secret_key.buffer.end(), sec.buffer.begin());
 
                   crypto::generate_signature(tx_prefix_hash, pub, sec, *sigs.data());
               }

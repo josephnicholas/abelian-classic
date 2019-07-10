@@ -4422,13 +4422,6 @@ crypto::rand_key wallet2::generate(const std::string& wallet_, const epee::wipea
   init_type(hw::device::device_type::SOFTWARE);
   // Dilithium random 32 byte seed
   m_account.save_randomness(retval);
-
-  m_account_public_address = m_account.get_keys().m_account_address;
-  m_watch_only = false;
-  m_multisig = false;
-  m_multisig_threshold = 0;
-  m_multisig_signers.clear();
-  m_key_device_type = hw::device::device_type::SOFTWARE;
   setup_keys(password);
 
   // calculate a starting refresh height
@@ -10774,7 +10767,7 @@ bool wallet2::check_spend_proof(const crypto::hash &txid, const std::string &mes
 
   // Dilithium - sig verification
   crypto::public_key k_i;
-  std::memcpy(&k_i, &in_key->k_image, CRYPTO_PUBLICKEYBYTES);
+  std::copy(in_key->k_image.buffer.begin(), in_key->k_image.buffer.end(), k_i.buffer.begin());
   auto ok = crypto::check_signature(sig_prefix_hash, k_i, *sig_iter->data());
 
     // check this ring
@@ -11418,7 +11411,7 @@ bool wallet2::check_reserve_proof(const cryptonote::account_public_address &addr
     const std::vector<const crypto::public_key*> pubs { &out_key->key };
     // Dilithium - sig verification
     crypto::public_key k_i;
-    std::memcpy(&k_i, &proof.key_image, CRYPTO_PUBLICKEYBYTES);
+    std::copy(proof.key_image.buffer.begin(), proof.key_image.buffer.end(), k_i.buffer.begin());
     ok = crypto::check_signature(prefix_hash, k_i, proof.key_image_sig);//check_ring_signature(prefix_hash, proof.key_image, &pubs[0], 1, &proof.key_image_sig);
     if (!ok)
       return false;

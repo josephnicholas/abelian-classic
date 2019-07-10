@@ -28,20 +28,20 @@
 // 
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#include <unistd.h>
+#include <boost/shared_ptr.hpp>
+#include <boost/thread/lock_guard.hpp>
+#include <boost/thread/mutex.hpp>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/lock_guard.hpp>
-#include <boost/shared_ptr.hpp>
+#include <unistd.h>
 
 #include "common/varint.h"
-#include "warnings.h"
 #include "crypto.h"
 #include "hash.h"
+#include "warnings.h"
 
 // Add some log capabilities
 #include "misc_log_ex.h"
@@ -60,7 +60,8 @@ namespace crypto {
 
   extern "C" {
 #include "crypto-ops.h"
-#include "random.h"	  
+#include "random.h"
+#include "dilithium/ref/fips202.h"
   }
 
   const crypto::public_key null_pkey = crypto::public_key{};
@@ -147,7 +148,8 @@ namespace crypto {
     //ge_p3_tobytes(&pub, &point);
 
     // Dilithium keypair generation call with 'rng' as the seed, to have deterministic keys.
-    auto rc = crypto_sign_dilithium_keypair((uint8_t *)pub.buffer.data(), (uint8_t *)sec.buffer.data(), (uint8_t *)&rng);
+    auto rc = crypto_sign_dilithium_keypair(&pub, &sec, (uint8_t *)&rng);
+
     assert(rc == 0);
 
     // The random 32 byte number
@@ -335,7 +337,7 @@ namespace crypto {
 #else
     unsigned long long messageLength{};
     std::array<uint8_t, CRYPTO_BYTES + HASH_SIZE> message{};
-    auto result = crypto_sign_dilithium_open(message.data(), &messageLength, (uint8_t *)sig.buffer.data(), sizeof(sig), &pub);
+    auto result = crypto_sign_dilithium_open(message.data(), &messageLength, (uint8_t *)sig.buffer.data(), sizeof(sig), (uint8_t *)pub.buffer.data());
 
     return result == 0;
 #endif
