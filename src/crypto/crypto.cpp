@@ -88,7 +88,7 @@ namespace crypto {
   {
     static boost::mutex random_lock;
     boost::lock_guard<boost::mutex> lock(random_lock);
-    generate_random_bytes_not_thread_safe(N, bytes);
+    generate_random_bytes_not_thread_safe(_N, bytes);
   }
 
   static inline bool less32(const unsigned char *k0, const unsigned char *k1)

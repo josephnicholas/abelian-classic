@@ -67,7 +67,7 @@ namespace crypto {
 
   // Randomness data type
   POD_CLASS random_key {
-      char data[KYBER_SYMBYTES]; // We need to agree on this!
+      char data[32U]; // We need to agree on this!
   };
 
   using secret_key = epee::mlocked<tools::scrubbed<ec_scalar>>;
