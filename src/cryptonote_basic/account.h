@@ -46,14 +46,20 @@ namespace cryptonote
     hw::device *m_device = &hw::get_device("default");
     crypto::chacha_iv m_encryption_iv;
 
-    /* Dilithium experimental value
-     *
+    /**
+     * Proposal on shorter Public addresses - Experimental
+     */
+    account_public_short_address m_account_short_address;
+
+    /**
+     * Dilithium experimental value
      * Purpose: Public key and output tx key generation.
     */
     crypto::rand_key m_random_generate_key;
 
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(m_account_address)
+      KV_SERIALIZE(m_account_short_address)
       KV_SERIALIZE_VAL_POD_AS_BLOB_FORCE(m_spend_secret_key)
       KV_SERIALIZE_VAL_POD_AS_BLOB_FORCE(m_view_secret_key)
       KV_SERIALIZE_VAL_POD_AS_BLOB_FORCE(m_random_generate_key)
@@ -92,6 +98,7 @@ namespace cryptonote
     void finalize_multisig(const crypto::public_key &spend_public_key);
     const account_keys& get_keys() const;
     std::string get_public_address_str(network_type nettype) const;
+    std::string get_short_public_address_str(network_type nettype) const;
     std::string get_public_integrated_address_str(const crypto::hash8 &payment_id, network_type nettype) const;
 
     hw::device& get_device() const  {return m_keys.get_device();}

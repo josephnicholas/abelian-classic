@@ -167,6 +167,15 @@ namespace cryptonote {
     return tools::base58::encode_addr(address_prefix, t_serializable_object_to_blob(adr));
   }
   //-----------------------------------------------------------------------
+  std::string get_short_account_address_as_str(
+      network_type nettype,
+      bool subaddress,
+      const account_public_short_address &shortAdr) {
+    uint64_t address_prefix = subaddress ? get_config(nettype).CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX : get_config(nettype).CRYPTONOTE_PUBLIC_SHORT_ADDRESS_BASE58_PREFIX;
+
+    return tools::base58::encode_addr(address_prefix, t_serializable_object_to_blob(shortAdr));
+  }
+  //-----------------------------------------------------------------------
   std::string get_account_integrated_address_as_str(
       network_type nettype
     , account_public_address const & adr
@@ -201,6 +210,7 @@ namespace cryptonote {
     uint64_t address_prefix = get_config(nettype).CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX;
     uint64_t integrated_address_prefix = get_config(nettype).CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX;
     uint64_t subaddress_prefix = get_config(nettype).CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX;
+    uint64_t short_address_prefix = get_config(nettype).CRYPTONOTE_PUBLIC_SHORT_ADDRESS_BASE58_PREFIX;
 
     if (2 * sizeof(public_address_outer_blob) != str.size())
     {
@@ -216,16 +226,25 @@ namespace cryptonote {
       {
         info.is_subaddress = false;
         info.has_payment_id = true;
+        info.has_short_address = false;
       }
       else if (address_prefix == prefix)
       {
         info.is_subaddress = false;
         info.has_payment_id = false;
+        info.has_short_address = false;
       }
       else if (subaddress_prefix == prefix)
       {
         info.is_subaddress = true;
         info.has_payment_id = false;
+        info.has_short_address = false;
+      }
+      else if (short_address_prefix == prefix)
+      {
+        info.is_subaddress = false;
+        info.has_payment_id = false;
+        info.has_short_address = true;
       }
       else {
         LOG_PRINT_L1("Wrong address prefix: " << prefix << ", expected " << address_prefix 
@@ -244,6 +263,15 @@ namespace cryptonote {
         }
         info.address = iadr.adr;
         info.payment_id = iadr.payment_id;
+      }
+      else if(info.has_short_address)
+      {
+        account_public_short_address shortAddr{};
+        if(!::serialization::parse_binary(data, shortAddr))
+        {
+          LOG_PRINT_L1("Account short public address keys can't be parsed");
+          return false;
+        }
       }
       else
       {
@@ -319,7 +347,7 @@ namespace cryptonote {
   bool operator ==(const cryptonote::block& a, const cryptonote::block& b) {
     return cryptonote::get_block_hash(a) == cryptonote::get_block_hash(b);
   }
-}
+  }
 
 //--------------------------------------------------------------------------------
 bool parse_hash256(const std::string &str_hash, crypto::hash& hash)

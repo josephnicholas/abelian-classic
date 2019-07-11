@@ -4294,7 +4294,10 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
   {
     recovery_val = m_wallet->generate(m_wallet_file, std::move(rc.second).password(), recovery_key, recover, two_random, create_address_file);
     message_writer(console_color_white, true) << tr("Generated new wallet: ")
-      << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
+                                              << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
+    putchar('\n');
+    message_writer(console_color_red, true) << tr("Short address: ")
+                                              << m_wallet->get_account().get_short_public_address_str(m_wallet->nettype());
     PAUSE_READLINE();
     /*std::cout << tr("View key: ");
     print_secret_key(m_wallet->get_account().get_keys().m_view_secret_key);*/
@@ -4367,6 +4370,10 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     }
     message_writer(console_color_white, true) << tr("Generated new wallet: ")
       << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
+
+    putchar('\n');
+    message_writer(console_color_red, true) << tr("Short address: ")
+                                            << m_wallet->get_account().get_short_public_address_str(m_wallet->nettype());
   }
   catch (const std::exception& e)
   {
@@ -4514,6 +4521,9 @@ boost::optional<epee::wipeable_string> simple_wallet::open_wallet(const boost::p
       prefix = tr("Opened wallet");
     message_writer(console_color_white, true) <<
       prefix << ": " << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
+    putchar('\n');
+    message_writer(console_color_red, true) << tr("Short address: ")<< ": "
+                                            << m_wallet->get_account().get_short_public_address_str(m_wallet->nettype());
     if (m_wallet->get_account().get_device()) {
        message_writer(console_color_white, true) << "Wallet is on device: " << m_wallet->get_account().get_device().get_name();
     }
