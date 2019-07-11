@@ -79,6 +79,8 @@ set(crypto_private_headers
 
 include_directories(../dilithium)
 
+add_subdirectory(salrs)
+
 monero_private_headers(cncrypto
   ${crypto_private_headers})
 monero_add_library(cncrypto
@@ -88,6 +90,7 @@ monero_add_library(cncrypto
 target_link_libraries(cncrypto
   PUBLIC
 dilithium
+    salrs
     epee
     ${Boost_SYSTEM_LIBRARY}
     ${SODIUM_LIBRARY}
