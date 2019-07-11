@@ -61,7 +61,8 @@ namespace crypto {
   extern "C" {
 #include "crypto-ops.h"
 #include "random.h"
-#include "dilithium/ref/fips202.h"
+
+#include "salrs/src/salrs_main.h"
   }
 
   const crypto::public_key null_pkey = crypto::public_key{};
@@ -87,7 +88,7 @@ namespace crypto {
   {
     static boost::mutex random_lock;
     boost::lock_guard<boost::mutex> lock(random_lock);
-    generate_random_bytes_not_thread_safe(_N, bytes);
+    generate_random_bytes_not_thread_safe(N, bytes);
   }
 
   static inline bool less32(const unsigned char *k0, const unsigned char *k1)
@@ -148,9 +149,11 @@ namespace crypto {
     //ge_p3_tobytes(&pub, &point);
 
     // Dilithium keypair generation call with 'rng' as the seed, to have deterministic keys.
-    auto rc = crypto_sign_dilithium_keypair(&pub, &sec, (uint8_t *)&rng);
+    //auto rc = crypto_sign_dilithium_keypair(&pub, &sec, (uint8_t *)&rng);
 
-    assert(rc == 0);
+    master_key_gen(&pub, &sec, (uint8_t *)&rng);
+
+    //assert(rc == 0);
 
     // The random 32 byte number
     return rng;

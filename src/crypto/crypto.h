@@ -49,15 +49,16 @@ namespace crypto {
 
   extern "C" {
   #include "dilithium/ref/api.h"
+  #include "salrs/src/params_salrs.h"
   }
 
 #pragma pack(push, 1)
   POD_CLASS ec_point {
-      std::array<char, CRYPTO_PUBLICKEYBYTES> buffer;
+      std::array<char, SIZE_MPK> buffer;
   };
 
   POD_CLASS ec_scalar {
-      std::array<char, CRYPTO_SECRETKEYBYTES> buffer;
+      std::array<char, SIZE_MSK> buffer;
   };
 
   POD_CLASS public_key: ec_point {
@@ -66,7 +67,7 @@ namespace crypto {
 
   // Randomness data type
   POD_CLASS random_key {
-      char data[32U]; // We need to agree on this!
+      char data[KYBER_SYMBYTES]; // We need to agree on this!
   };
 
   using secret_key = epee::mlocked<tools::scrubbed<ec_scalar>>;
