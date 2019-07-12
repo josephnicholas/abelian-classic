@@ -160,8 +160,9 @@ namespace crypto {
   }
 
   bool crypto_ops::check_key(const public_key &key) {
-    ge_p3 point;
-    return ge_frombytes_vartime(&point, &key) == 0;
+    //ge_p3 point;
+    //return ge_frombytes_vartime(&point, &key) == 0;
+    return derived_public_key_public_check((uint8_t *)&key) == 1;
   }
 
   bool crypto_ops::secret_key_to_public_key(const secret_key &sec, public_key &pub) {
