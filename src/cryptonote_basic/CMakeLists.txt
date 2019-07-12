@@ -70,8 +70,8 @@ monero_add_library(cryptonote_basic
 target_link_libraries(cryptonote_basic
   PUBLIC
     common
-    dilithium
     cncrypto
+    salrs
     checkpoints
     device
     ${Boost_DATE_TIME_LIBRARY}

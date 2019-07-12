@@ -51,7 +51,6 @@ using namespace crypto;
 namespace cryptonote
 {
     extern "C" {
-    #include "dilithium/ref/rng.h"
     }
   //---------------------------------------------------------------
   void classify_addresses(const std::vector<tx_destination_entry> &destinations, const boost::optional<cryptonote::account_public_address>& change_addr, size_t &num_stdaddresses, size_t &num_subaddresses, account_public_address &single_dest_subaddress)
@@ -163,7 +162,7 @@ namespace cryptonote
       tx_out out;
       summary_amounts += out.amount = out_amounts[no];
       out.target = tk;
-      dilithium_randombytes((unsigned char *)&out.random, 32U);
+      //dilithium_randombytes((unsigned char *)&out.random, 32U);
       tx.vout.push_back(out);
     }
 
@@ -432,7 +431,7 @@ namespace cryptonote
       txout_to_key tk;
       tk.key = out_eph_public_key;
       out.target = tk;
-      dilithium_randombytes((unsigned char *)&out.random, 32U);
+//      dilithium_randombytes((unsigned char *)&out.random, 32U);
       tx.vout.push_back(out);
       output_index++;
       summary_outs_money += dst_entr.amount;
@@ -667,7 +666,7 @@ namespace cryptonote
           txin_to_key input_to_key;
           input_to_key.amount = src_entr.amount;
           input_to_key.k_image = msout ? rct::rct2ki(src_entr.multisig_kLRki.ki) : img;
-          dilithium_randombytes((unsigned char *)&input_to_key.random, 32U);
+//          dilithium_randombytes((unsigned char *)&input_to_key.random, 32U);
 
           //fill outputs array and use relative offsets
           for(const tx_source_entry::output_entry& out_entry: src_entr.outputs)
@@ -747,7 +746,7 @@ namespace cryptonote
           txout_to_key tk;
           tk.key = out_eph_public_key;
           out.target = tk;
-          dilithium_randombytes((unsigned char *)&out.random, 32U);
+//          dilithium_randombytes((unsigned char *)&out.random, 32U);
           tx.vout.push_back(out);
           output_index++;
           summary_outs_money += dst_entr.amount;

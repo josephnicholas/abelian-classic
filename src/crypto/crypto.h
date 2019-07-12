@@ -48,7 +48,6 @@
 namespace crypto {
 
   extern "C" {
-  #include "dilithium/ref/api.h"
   #include "salrs/src/params_salrs.h"
   }
 
@@ -67,7 +66,7 @@ namespace crypto {
 
   // Randomness data type
   POD_CLASS random_key {
-      char data[32U]; // We need to agree on this!
+      char data[32]; // We need to agree on this!
   };
 
   using secret_key = epee::mlocked<tools::scrubbed<ec_scalar>>;
@@ -90,8 +89,8 @@ namespace crypto {
     std::vector<secret_keyV> column_vectors;
   };
 
-  POD_CLASS key_derivation: ec_point {
-    friend class crypto_ops;
+  POD_CLASS key_derivation {
+      std::array<char, SIZE_DPK> buffer;
   };
 
   POD_CLASS key_image: ec_point {
@@ -100,7 +99,7 @@ namespace crypto {
 
   POD_CLASS signature {
     //ec_scalar c, r; // TODO: changed to 32 byte rand for creating and checking ring sigs
-    std::array<char, CRYPTO_BYTES + HASH_SIZE> buffer;
+    std::array<char, 4000*20 + HASH_SIZE> buffer;
     friend class crypto_ops;
   };
 #pragma pack(pop)

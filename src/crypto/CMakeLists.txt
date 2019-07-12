@@ -26,6 +26,8 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+add_subdirectory(salrs)
+
 set(crypto_sources
   aesb.c
   blake256.c
@@ -77,10 +79,6 @@ set(crypto_private_headers
   CryptonightR_JIT.h
   CryptonightR_template.h)
 
-include_directories(../dilithium)
-
-add_subdirectory(salrs)
-
 monero_private_headers(cncrypto
   ${crypto_private_headers})
 monero_add_library(cncrypto
@@ -89,7 +87,6 @@ monero_add_library(cncrypto
   ${crypto_private_headers})
 target_link_libraries(cncrypto
   PUBLIC
-dilithium
     salrs
     epee
     ${Boost_SYSTEM_LIBRARY}
