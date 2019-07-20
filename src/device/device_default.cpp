@@ -209,9 +209,9 @@ namespace hw {
             crypto::hash_to_scalar(data, sizeof(data), m);*/
             crypto::secret_key m;
             // TODO: No Dilithium implementation yet, so derived_key = sVk
-            unsigned char secretViewKey[CRYPTO_SECRETKEYBYTES];
-            std::memcpy(secretViewKey, &a, CRYPTO_SECRETKEYBYTES);
-            std::memcpy(&m, secretViewKey, CRYPTO_SECRETKEYBYTES);
+            unsigned char secretViewKey[SIZE_MSK];
+            std::memcpy(secretViewKey, &a, SIZE_MSK);
+            std::memcpy(&m, secretViewKey, SIZE_MSK);
 
             return m;
         }
