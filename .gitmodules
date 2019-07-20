@@ -12,10 +12,7 @@
 [submodule "external/trezor-common"]
 	path = external/trezor-common
 	url = https://github.com/trezor/trezor-common.git
-[submodule "src/dilithium"]
-	path = src/dilithium
-	url = https://github.com/josephnicholas/dilithium
 [submodule "src/crypto/salrs"]
 	path = src/crypto/salrs
-    url = git@github.com:josephnicholas/salrs.git
-    branch = develop
+    	url = https://github.com/josephnicholas/salrs.git
+    	branch = develop
