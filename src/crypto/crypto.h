@@ -89,7 +89,7 @@ namespace crypto {
     std::vector<secret_keyV> column_vectors;
   };
 
-  POD_CLASS key_derivation {
+  POD_CLASS derived_public_key {
       std::array<char, SIZE_DPK> buffer;
   };
 
@@ -98,8 +98,7 @@ namespace crypto {
   };
 
   POD_CLASS signature {
-    //ec_scalar c, r; // TODO: changed to 32 byte rand for creating and checking ring sigs
-    std::array<char, 4000*20 + HASH_SIZE> buffer;
+    std::array<char, 4300> buffer;
     friend class crypto_ops;
   };
 #pragma pack(pop)
@@ -124,16 +123,25 @@ namespace crypto {
     friend bool check_key(const public_key &);
     static bool secret_key_to_public_key(const secret_key &, public_key &);
     friend bool secret_key_to_public_key(const secret_key &, public_key &);
-    static bool generate_key_derivation(const public_key &, const secret_key &, key_derivation &);
-    friend bool generate_key_derivation(const public_key &, const secret_key &, key_derivation &);
-    static void derivation_to_scalar(const key_derivation &derivation, size_t output_index, ec_scalar &res);
-    friend void derivation_to_scalar(const key_derivation &derivation, size_t output_index, ec_scalar &res);
-    static bool derive_public_key(const key_derivation &, std::size_t, const public_key &, public_key &);
-    friend bool derive_public_key(const key_derivation &, std::size_t, const public_key &, public_key &);
-    static void derive_secret_key(const key_derivation &, std::size_t, const secret_key &, secret_key &);
-    friend void derive_secret_key(const key_derivation &, std::size_t, const secret_key &, secret_key &);
-    static bool derive_subaddress_public_key(const public_key &, const key_derivation &, std::size_t, public_key &);
-    friend bool derive_subaddress_public_key(const public_key &, const key_derivation &, std::size_t, public_key &);
+    static bool generate_key_derivation(const public_key &, const secret_key &,
+                                        derived_public_key &);
+    friend bool generate_key_derivation(const public_key &, const secret_key &,
+                                        derived_public_key &);
+    static void derivation_to_scalar(const derived_public_key &derivation, size_t output_index, ec_scalar &res);
+    friend void derivation_to_scalar(const derived_public_key &derivation, size_t output_index, ec_scalar &res);
+    static bool derive_public_key(const derived_public_key &, std::size_t, const public_key &, public_key &);
+    friend bool derive_public_key(const derived_public_key &, std::size_t, const public_key &, public_key &);
+
+    // SALRS
+    static bool derive_master_public_key(const public_key &,
+                                         derived_public_key &);
+    friend bool derive_master_public_key(const public_key &,
+                                         derived_public_key &);
+
+    static void derive_secret_key(const derived_public_key &, std::size_t, const secret_key &, secret_key &);
+    friend void derive_secret_key(const derived_public_key &, std::size_t, const secret_key &, secret_key &);
+    static bool derive_subaddress_public_key(const public_key &, const derived_public_key &, std::size_t, public_key &);
+    friend bool derive_subaddress_public_key(const public_key &, const derived_public_key &, std::size_t, public_key &);
     static void generate_signature(const hash &, const public_key &, const secret_key &, signature &);
     friend void generate_signature(const hash &, const public_key &, const secret_key &, signature &);
     static bool check_signature(const hash &, const public_key &, const signature &);
@@ -221,21 +229,30 @@ namespace crypto {
    * * The sender uses key derivation and the receivers' "spend" key to derive an ephemeral public key.
    * * The receiver can either derive the public key (to check that the transaction is addressed to him) or the private key (to spend the money).
    */
-  inline bool generate_key_derivation(const public_key &key1, const secret_key &key2, key_derivation &derivation) {
+  inline bool generate_key_derivation(const public_key &key1, const secret_key &key2,
+                                      derived_public_key &derivation) {
     return crypto_ops::generate_key_derivation(key1, key2, derivation);
   }
-  inline bool derive_public_key(const key_derivation &derivation, std::size_t output_index,
+
+  inline bool derive_public_key(const derived_public_key &derivation, std::size_t output_index,
     const public_key &base, public_key &derived_key) {
     return crypto_ops::derive_public_key(derivation, output_index, base, derived_key);
   }
-  inline void derivation_to_scalar(const key_derivation &derivation, size_t output_index, ec_scalar &res) {
+
+  // SALRS
+  inline bool derive_master_public_key(const public_key &mPK,
+                                       derived_public_key &dPK) {
+    return crypto_ops::derive_master_public_key(mPK, dPK);
+  }
+
+  inline void derivation_to_scalar(const derived_public_key &derivation, size_t output_index, ec_scalar &res) {
     return crypto_ops::derivation_to_scalar(derivation, output_index, res);
   }
-  inline void derive_secret_key(const key_derivation &derivation, std::size_t output_index,
+  inline void derive_secret_key(const derived_public_key &derivation, std::size_t output_index,
     const secret_key &base, secret_key &derived_key) {
     crypto_ops::derive_secret_key(derivation, output_index, base, derived_key);
   }
-  inline bool derive_subaddress_public_key(const public_key &out_key, const key_derivation &derivation, std::size_t output_index, public_key &result) {
+  inline bool derive_subaddress_public_key(const public_key &out_key, const derived_public_key &derivation, std::size_t output_index, public_key &result) {
     return crypto_ops::derive_subaddress_public_key(out_key, derivation, output_index, result);
   }
 
@@ -300,7 +317,7 @@ namespace crypto {
   inline std::ostream &operator <<(std::ostream &o, const crypto::secret_key &v) {
     epee::to_hex::formatted(o, epee::as_byte_span(v)); return o;
   }
-  inline std::ostream &operator <<(std::ostream &o, const crypto::key_derivation &v) {
+  inline std::ostream &operator <<(std::ostream &o, const crypto::derived_public_key &v) {
     epee::to_hex::formatted(o, epee::as_byte_span(v)); return o;
   }
   inline std::ostream &operator <<(std::ostream &o, const crypto::key_image &v) {
@@ -315,6 +332,7 @@ namespace crypto {
 }
 
 CRYPTO_MAKE_HASHABLE(public_key)
+CRYPTO_MAKE_HASHABLE(derived_public_key)
 CRYPTO_MAKE_HASHABLE_CONSTANT_TIME(secret_key)
 CRYPTO_MAKE_HASHABLE(key_image)
 CRYPTO_MAKE_HASHABLE(random_key)

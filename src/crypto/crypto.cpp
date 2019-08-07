@@ -130,8 +130,6 @@ namespace crypto {
    * 
    */
   rand_key crypto_ops::generate_keys(public_key &pub, secret_key &sec, const rand_key & recovery_key, bool recover) {
-    //ge_p3 point;
-
     rand_key rng{};
 
     if (recover)
@@ -141,7 +139,6 @@ namespace crypto {
     else {
         random_scalar(rng);
     }
-
     master_key_gen(&pub, &sec, (uint8_t *)&rng);
 
     // The random 32 byte number
@@ -162,7 +159,8 @@ namespace crypto {
     return true;
   }
 
-  bool crypto_ops::generate_key_derivation(const public_key &key1, const secret_key &key2, key_derivation &derivation) {
+  bool crypto_ops::generate_key_derivation(const public_key &key1, const secret_key &key2,
+                                           derived_public_key &derivation) {
 #ifdef NDILITHIUM_CRYPTO
     ge_p3 point;
     ge_p2 point2;
@@ -181,9 +179,9 @@ namespace crypto {
     return true;
   }
 
-  void crypto_ops::derivation_to_scalar(const key_derivation &derivation, size_t output_index, ec_scalar &res) {
+  void crypto_ops::derivation_to_scalar(const derived_public_key &derivation, size_t output_index, ec_scalar &res) {
     struct {
-      key_derivation derivation;
+      derived_public_key derivation;
       char output_index[(sizeof(size_t) * 8 + 6) / 7];
     } buf{};
     char *end = buf.output_index;
@@ -193,7 +191,7 @@ namespace crypto {
     hash_to_scalar(&buf, end - reinterpret_cast<char *>(&buf), res);
   }
 
-  bool crypto_ops::derive_public_key(const key_derivation &derivation, size_t output_index,
+  bool crypto_ops::derive_public_key(const derived_public_key &derivation, size_t output_index,
     const public_key &base, public_key &derived_key) {
 #ifdef NDILITHIUM_CRYPTO
     ec_scalar scalar{};
@@ -217,7 +215,14 @@ namespace crypto {
     return true;
   }
 
-  void crypto_ops::derive_secret_key(const key_derivation &derivation, size_t output_index,
+  bool crypto_ops::derive_master_public_key(const public_key &mPK,
+                                            derived_public_key &dPK) {
+    derived_public_key_gen((uint8_t *)&mPK, (uint8_t *)&dPK);
+
+    return derived_public_key_public_check((uint8_t *)&dPK) == 1;
+  }
+
+  void crypto_ops::derive_secret_key(const derived_public_key &derivation, size_t output_index,
     const secret_key &base, secret_key &derived_key) {
 #ifdef NDILITHIUM_CRYPTO
     ec_scalar scalar{};
@@ -229,7 +234,8 @@ namespace crypto {
 #endif
   }
 
-  bool crypto_ops::derive_subaddress_public_key(const public_key &out_key, const key_derivation &derivation, std::size_t output_index, public_key &derived_key) {
+  // TODO: Might be removed since we need to do derivation with Master Public Key, that function will suffice.
+  bool crypto_ops::derive_subaddress_public_key(const public_key &out_key, const derived_public_key &derivation, std::size_t output_index, public_key &derived_key) {
 #ifdef NDILITHIUM_CRYPTO
     ec_scalar scalar{};
     ge_p3 point1;

@@ -150,7 +150,7 @@ namespace hw {
     virtual void live_refresh(
         const ::crypto::secret_key & view_key_priv,
         const crypto::public_key& out_key,
-        const crypto::key_derivation& recv_derivation,
+        const crypto::derived_public_key & recv_derivation,
         size_t real_output_index,
         const cryptonote::subaddress_index& received_index,
         cryptonote::keypair& in_ephemeral,

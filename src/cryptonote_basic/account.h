@@ -41,6 +41,8 @@ namespace cryptonote
   {
     account_public_address m_account_address;
     crypto::secret_key   m_spend_secret_key;
+
+    // This will be removed soon!
     crypto::secret_key    m_view_secret_key;
     std::vector<crypto::secret_key> m_multisig_keys;
     hw::device *m_device = &hw::get_device("default");

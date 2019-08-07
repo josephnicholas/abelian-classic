@@ -249,21 +249,22 @@ namespace cryptonote
     return is_v1_tx(blobdata_ref{tx_blob.data(), tx_blob.size()});
   }
   //---------------------------------------------------------------
-  bool generate_key_image_helper(const account_keys& ack, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, const crypto::public_key& out_key, const crypto::public_key& tx_public_key, const std::vector<crypto::public_key>& additional_tx_public_keys, size_t real_output_index, keypair& in_ephemeral, crypto::key_image& ki, hw::device &hwdev)
+  bool generate_key_image_helper(const account_keys& ack, const std::unordered_map<crypto::derived_public_key, subaddress_index>& subaddresses, const crypto::derived_public_key& out_key, const crypto::derived_public_key& tx_public_key, const std::vector<crypto::derived_public_key>& additional_tx_public_keys, size_t real_output_index, keypair& in_ephemeral, crypto::key_image& ki, hw::device &hwdev)
   {
-    crypto::key_derivation recv_derivation = AUTO_VAL_INIT(recv_derivation);
-    bool r = hwdev.generate_key_derivation(tx_public_key, ack.m_view_secret_key, recv_derivation);
+    // TODO: All of the computations are already inside the SALRS generate signature, just need to take not of this prep
+    crypto::derived_public_key recv_derivation = AUTO_VAL_INIT(recv_derivation);
+    bool r = hwdev.derive_master_public_key(ack.m_account_address.m_spend_public_key, recv_derivation);
     if (!r)
     {
       MWARNING("key image helper: failed to generate_key_derivation(" << tx_public_key << ", " << ack.m_view_secret_key << ")");
       memcpy(&recv_derivation, rct::identity().bytes, sizeof(recv_derivation));
     }
 
-    std::vector<crypto::key_derivation> additional_recv_derivations;
+    std::vector<crypto::derived_public_key> additional_recv_derivations;
     for (size_t i = 0; i < additional_tx_public_keys.size(); ++i)
     {
-      crypto::key_derivation additional_recv_derivation = AUTO_VAL_INIT(additional_recv_derivation);
-      r = hwdev.generate_key_derivation(additional_tx_public_keys[i], ack.m_view_secret_key, additional_recv_derivation);
+      crypto::derived_public_key additional_recv_derivation = AUTO_VAL_INIT(additional_recv_derivation);
+      r = hwdev.derive_master_public_key(ack.m_account_address.m_spend_public_key, additional_recv_derivation);
       if (!r)
       {
         MWARNING("key image helper: failed to generate_key_derivation(" << additional_tx_public_keys[i] << ", " << ack.m_view_secret_key << ")");
@@ -274,16 +275,16 @@ namespace cryptonote
       }
     }
 
-    boost::optional<subaddress_receive_info> subaddr_recv_info = is_out_to_acc_precomp(subaddresses, out_key, recv_derivation, additional_recv_derivations, real_output_index,hwdev);
+    boost::optional<subaddress_receive_info> subaddr_recv_info = is_out_to_acc_precomp(ack, subaddresses, out_key, recv_derivation, additional_recv_derivations, real_output_index,hwdev);
     CHECK_AND_ASSERT_MES(subaddr_recv_info, false, "key image helper: given output pubkey doesn't seem to belong to this address");
 
-    return generate_key_image_helper_precomp(ack, out_key, subaddr_recv_info->derivation, real_output_index, subaddr_recv_info->index, in_ephemeral, ki, hwdev);
+    return true;//generate_key_image_helper_precomp(ack, out_key, subaddr_recv_info->derivation, real_output_index, subaddr_recv_info->index, in_ephemeral, ki, hwdev);
   }
   //---------------------------------------------------------------
   // From Hydrogen Helix, Point Release 4
   bool generate_key_image_helper(const account_keys& ack, const crypto::public_key& tx_public_key, size_t real_output_index, keypair& in_ephemeral, crypto::key_image& ki)
   {
-      crypto::key_derivation recv_derivation = AUTO_VAL_INIT(recv_derivation);
+      crypto::derived_public_key recv_derivation = AUTO_VAL_INIT(recv_derivation);
       bool r = crypto::generate_key_derivation(tx_public_key, ack.m_view_secret_key, recv_derivation);
       CHECK_AND_ASSERT_MES(r, false, "key image helper: failed to generate_key_derivation(" << tx_public_key << ", " << ack.m_view_secret_key << ")");
 
@@ -296,7 +297,7 @@ namespace cryptonote
       return true;
   }
   //---------------------------------------------------------------
-  bool generate_key_image_helper_precomp(const account_keys& ack, const crypto::public_key& out_key, const crypto::key_derivation& recv_derivation, size_t real_output_index, const subaddress_index& received_index, keypair& in_ephemeral, crypto::key_image& ki, hw::device &hwdev)
+  bool generate_key_image_helper_precomp(const account_keys& ack, const crypto::public_key& out_key, const crypto::derived_public_key & recv_derivation, size_t real_output_index, const subaddress_index& received_index, keypair& in_ephemeral, crypto::key_image& ki, hw::device &hwdev)
   {
     if (hwdev.compute_key_image(ack, out_key, recv_derivation, real_output_index, received_index, in_ephemeral, ki))
     {
@@ -843,11 +844,8 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool is_out_to_acc(const account_keys& acc, const txout_to_key& out_key, const crypto::public_key& tx_pub_key, const std::vector<crypto::public_key>& additional_tx_pub_keys, size_t output_index)
   {
-    crypto::key_derivation derivation;
-    bool r = acc.get_device().generate_key_derivation(tx_pub_key, acc.m_view_secret_key, derivation);
-    CHECK_AND_ASSERT_MES(r, false, "Failed to generate key derivation");
-    crypto::public_key pk;
-    r = acc.get_device().derive_public_key(derivation, output_index, acc.m_account_address.m_spend_public_key, pk);
+    crypto::derived_public_key pk{};
+    auto r = acc.get_device().derive_master_public_key(acc.m_account_address.m_spend_public_key, pk);
     CHECK_AND_ASSERT_MES(r, false, "Failed to derive public key");
     if (pk == out_key.key)
       return true;
@@ -855,33 +853,37 @@ namespace cryptonote
     if (!additional_tx_pub_keys.empty())
     {
       CHECK_AND_ASSERT_MES(output_index < additional_tx_pub_keys.size(), false, "wrong number of additional tx pubkeys");
-      r = acc.get_device().generate_key_derivation(additional_tx_pub_keys[output_index], acc.m_view_secret_key, derivation);
-      CHECK_AND_ASSERT_MES(r, false, "Failed to generate key derivation");
-      r = acc.get_device().derive_public_key(derivation, output_index, acc.m_account_address.m_spend_public_key, pk);
+      r = acc.get_device().derive_master_public_key(acc.m_account_address.m_spend_public_key, pk);
       CHECK_AND_ASSERT_MES(r, false, "Failed to derive public key");
       return pk == out_key.key;
     }
     return false;
   }
   //---------------------------------------------------------------
-  boost::optional<subaddress_receive_info> is_out_to_acc_precomp(const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, const crypto::public_key& out_key, const crypto::key_derivation& derivation, const std::vector<crypto::key_derivation>& additional_derivations, size_t output_index, hw::device &hwdev)
+  boost::optional<subaddress_receive_info> is_out_to_acc_precomp(const account_keys& acc, const std::unordered_map<crypto::derived_public_key, subaddress_index>& subaddresses, const crypto::derived_public_key& out_key, const crypto::derived_public_key & derivation, const std::vector<crypto::derived_public_key>& additional_derivations, size_t output_index, hw::device &hwdev)
   {
     // try the shared tx pubkey
-    crypto::public_key subaddress_spendkey;
-    hwdev.derive_subaddress_public_key(out_key, derivation, output_index, subaddress_spendkey);
+    // subaddress_spendkey is derived from MPK, so this is a full blown subaddr
+    crypto::derived_public_key subaddress_spendkey{};
+    hwdev.derive_master_public_key(acc.m_account_address.m_spend_public_key, subaddress_spendkey);
     auto found = subaddresses.find(subaddress_spendkey);
+
     // if subaddress spendkey is found in the list of subbaddresses
     if (found != subaddresses.end())
-      return subaddress_receive_info{ found->second, derivation };
+    {
+      return subaddress_receive_info{found->second, derivation};
+    }
+
     // try additional tx pubkeys if available
     if (!additional_derivations.empty())
     {
       CHECK_AND_ASSERT_MES(output_index < additional_derivations.size(), boost::none, "wrong number of additional derivations");
-      hwdev.derive_subaddress_public_key(out_key, additional_derivations[output_index], output_index, subaddress_spendkey);
+      hwdev.derive_master_public_key(acc.m_account_address.m_spend_public_key, subaddress_spendkey);
       found = subaddresses.find(subaddress_spendkey);
       if (found != subaddresses.end())
         return subaddress_receive_info{ found->second, additional_derivations[output_index] };
     }
+
     return boost::none;
   }
   //---------------------------------------------------------------

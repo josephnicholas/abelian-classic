@@ -157,19 +157,19 @@ DISABLE_VS_WARNINGS(4244 4345)
   //-----------------------------------------------------------------
   crypto::rand_key  account_base::generate(const crypto::rand_key & recovery_key, bool recover, bool two_random)
   {
-    crypto::rand_key  first = generate_keys(m_keys.m_account_address.m_spend_public_key, m_keys.m_spend_secret_key, recovery_key, recover);
+    auto random = generate_keys(m_keys.m_account_address.m_spend_public_key, m_keys.m_spend_secret_key, recovery_key, recover);
 
     // Create a hash of the spend_public key
-    keccak((uint8_t *)&m_keys.m_account_address.m_spend_public_key, sizeof(crypto::public_key), (uint8_t *)&m_keys.m_account_short_address.m_spend_public_key_hash, sizeof(crypto::hash));
+    //keccak((uint8_t *)&m_keys.m_account_address.m_spend_public_key, sizeof(crypto::public_key), (uint8_t *)&m_keys.m_account_short_address.m_spend_public_key_hash, sizeof(crypto::hash));
 
     // rng for generating second set of keys is hash of first rng.  means only one set of electrum-style words needed for recovery
-    crypto::rand_key  second;
+    //crypto::rand_key  second;
 
-    keccak((uint8_t *)&m_keys.m_spend_secret_key, sizeof(crypto::secret_key), (uint8_t *)&second, sizeof(crypto::rand_key));
-    generate_keys(m_keys.m_account_address.m_view_public_key, m_keys.m_view_secret_key, second, two_random ? false : true);
+    //keccak((uint8_t *)&m_keys.m_spend_secret_key, sizeof(crypto::secret_key), (uint8_t *)&second, sizeof(crypto::rand_key));
+    //generate_keys(m_keys.m_account_address.m_view_public_key, m_keys.m_view_secret_key, second, two_random ? false : true);
 
     // Create a hash of the view public key
-    keccak((uint8_t *)&m_keys.m_account_address.m_view_public_key, sizeof(crypto::public_key), (uint8_t *)&m_keys.m_account_short_address.m_view_public_key_hash, sizeof(crypto::hash));
+    //keccak((uint8_t *)&m_keys.m_account_address.m_view_public_key, sizeof(crypto::public_key), (uint8_t *)&m_keys.m_account_short_address.m_view_public_key_hash, sizeof(crypto::hash));
 
     struct tm timestamp = {0};
     timestamp.tm_year = 2014 - 1900;  // year 2014
@@ -189,7 +189,7 @@ DISABLE_VS_WARNINGS(4244 4345)
     {
       m_creation_timestamp = time(NULL);
     }
-    return first;
+    return random;
   }
   //-----------------------------------------------------------------
   void account_base::create_from_keys(const cryptonote::account_public_address& address, const crypto::secret_key& spendkey, const crypto::secret_key& viewkey)
@@ -259,7 +259,7 @@ DISABLE_VS_WARNINGS(4244 4345)
     m_keys.m_view_secret_key = view_secret_key;
     m_keys.m_spend_secret_key = spend_secret_key;
     m_keys.m_multisig_keys = multisig_keys;
-    return crypto::secret_key_to_public_key(view_secret_key, m_keys.m_account_address.m_view_public_key);
+    return true;//crypto::secret_key_to_public_key(view_secret_key, m_keys.m_account_address.m_view_public_key);
   }
   //-----------------------------------------------------------------
   void account_base::finalize_multisig(const crypto::public_key &spend_public_key)

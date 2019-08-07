@@ -122,7 +122,7 @@ namespace hw {
         /*                               SUB ADDRESS                               */
         /* ======================================================================= */
 
-        bool device_default::derive_subaddress_public_key(const crypto::public_key &out_key, const crypto::key_derivation &derivation, const std::size_t output_index, crypto::public_key &derived_key) {
+        bool device_default::derive_subaddress_public_key(const crypto::public_key &out_key, const crypto::derived_public_key &derivation, const std::size_t output_index, crypto::public_key &derived_key) {
             return crypto::derive_subaddress_public_key(out_key, derivation, output_index,derived_key);
         }
 
@@ -142,11 +142,11 @@ namespace hw {
             return D;
         }
 
-        std::vector<crypto::public_key>  device_default::get_subaddress_spend_public_keys(const cryptonote::account_keys &keys, uint32_t account, uint32_t begin, uint32_t end) {
+        std::vector<crypto::derived_public_key>  device_default::get_subaddress_spend_public_keys(const cryptonote::account_keys &keys, uint32_t account, uint32_t begin, uint32_t end) {
             CHECK_AND_ASSERT_THROW_MES(begin <= end, "begin > end");
 
-            std::vector<crypto::public_key> pkeys;
-            pkeys.reserve(end - begin);
+            std::vector<crypto::derived_public_key> pkeys;
+            /*pkeys.reserve(end - begin);
             cryptonote::subaddress_index index = {account, begin};
 
             ge_p3 p3;
@@ -176,7 +176,7 @@ namespace hw {
                 ge_p3_tobytes((unsigned char*)D.buffer.data(), &p3);
 
                 pkeys.push_back(D);
-            }
+            }*/
             return pkeys;
         }
 
@@ -191,7 +191,7 @@ namespace hw {
 
             // result: (C, D)
             cryptonote::account_public_address address;
-            address.m_view_public_key  = C;
+            address.m_spend_public_key  = C;
             address.m_spend_public_key = D;
             return address;
         }
@@ -246,22 +246,26 @@ namespace hw {
             return crypto::generate_keys(pub, sec, recovery_key, recover);
         }
 
-        bool device_default::generate_key_derivation(const crypto::public_key &key1, const crypto::secret_key &key2, crypto::key_derivation &derivation) {
+        bool device_default::generate_key_derivation(const crypto::public_key &key1, const crypto::secret_key &key2, crypto::derived_public_key &derivation) {
             return crypto::generate_key_derivation(key1, key2, derivation);
         }
 
-        bool device_default::derivation_to_scalar(const crypto::key_derivation &derivation, const size_t output_index, crypto::ec_scalar &res){
+        bool device_default::derivation_to_scalar(const crypto::derived_public_key &derivation, const size_t output_index, crypto::ec_scalar &res){
             crypto::derivation_to_scalar(derivation,output_index, res);
             return true;
         }
 
-        bool device_default::derive_secret_key(const crypto::key_derivation &derivation, const std::size_t output_index, const crypto::secret_key &base, crypto::secret_key &derived_key){
+        bool device_default::derive_secret_key(const crypto::derived_public_key &derivation, const std::size_t output_index, const crypto::secret_key &base, crypto::secret_key &derived_key){
             crypto::derive_secret_key(derivation, output_index, base, derived_key);
             return true;
         }
 
-        bool device_default::derive_public_key(const crypto::key_derivation &derivation, const std::size_t output_index, const crypto::public_key &base, crypto::public_key &derived_key){
+        bool device_default::derive_public_key(const crypto::derived_public_key &derivation, const std::size_t output_index, const crypto::public_key &base, crypto::public_key &derived_key){
             return crypto::derive_public_key(derivation, output_index, base, derived_key);
+        }
+
+        bool  device_default::derive_master_public_key(const crypto::public_key &mPK, crypto::derived_public_key &dPK) {
+            return crypto::derive_master_public_key(mPK, dPK);
         }
 
         bool device_default::secret_key_to_public_key(const crypto::secret_key &sec, crypto::public_key &pub) {
@@ -273,7 +277,7 @@ namespace hw {
             return true;
         }
 
-        bool device_default::conceal_derivation(crypto::key_derivation &derivation, const crypto::public_key &tx_pub_key, const std::vector<crypto::public_key> &additional_tx_pub_keys, const crypto::key_derivation &main_derivation, const std::vector<crypto::key_derivation> &additional_derivations){
+        bool device_default::conceal_derivation(crypto::derived_public_key &derivation, const crypto::public_key &tx_pub_key, const std::vector<crypto::public_key> &additional_tx_pub_keys, const crypto::derived_public_key &main_derivation, const std::vector<crypto::derived_public_key> &additional_derivations){
             return true;
         }
 
@@ -304,9 +308,9 @@ namespace hw {
                                                             const cryptonote::tx_destination_entry &dst_entr, const boost::optional<cryptonote::account_public_address> &change_addr, const size_t output_index,
                                                             const bool &need_additional_txkeys, const std::vector<crypto::secret_key> &additional_tx_keys,
                                                             std::vector<crypto::public_key> &additional_tx_public_keys,
-                                                            std::vector<rct::key> &amount_keys,  crypto::public_key &out_eph_public_key) {
+                                                            std::vector<rct::key> &amount_keys,  crypto::derived_public_key &out_eph_public_key) {
 
-            crypto::key_derivation derivation;
+            crypto::derived_public_key derivation;
 
             // make additional tx pubkey if necessary
             cryptonote::keypair additional_txkey;
@@ -319,39 +323,19 @@ namespace hw {
                     additional_txkey.pub = rct::rct2pk(rct::scalarmultBase(rct::sk2rct(additional_txkey.sec)));
             }
 
-            bool r;
-            if (change_addr && dst_entr.addr == *change_addr)
-            {
-            // sending change to yourself; derivation = a*R
-                r = generate_key_derivation(txkey_pub, sender_account_keys.m_view_secret_key, derivation);
-                CHECK_AND_ASSERT_MES(r, false, "at creation outs: failed to generate_key_derivation(" << txkey_pub << ", " << sender_account_keys.m_view_secret_key << ")");
-            }
-            else
-            {
-            // sending to the recipient; derivation = r*A (or s*C in the subaddress scheme)
-                r = generate_key_derivation(dst_entr.addr.m_view_public_key, dst_entr.is_subaddress && need_additional_txkeys ? additional_txkey.sec : tx_key, derivation);
-                CHECK_AND_ASSERT_MES(r, false, "at creation outs: failed to generate_key_derivation(" << dst_entr.addr.m_view_public_key << ", " << (dst_entr.is_subaddress && need_additional_txkeys ? additional_txkey.sec : tx_key) << ")");
-            }
-
             if (need_additional_txkeys)
             {
                 additional_tx_public_keys.push_back(additional_txkey.pub);
             }
 
-            if (tx_version > 1)
-            {
-                crypto::secret_key scalar1;
-                derivation_to_scalar(derivation, output_index, scalar1);
-                amount_keys.push_back(rct::sk2rct(scalar1));
-            }
-            r = derive_public_key(derivation, output_index, dst_entr.addr.m_spend_public_key, out_eph_public_key);
-            CHECK_AND_ASSERT_MES(r, false, "at creation outs: failed to derive_public_key(" << derivation << ", " << output_index << ", "<< dst_entr.addr.m_spend_public_key << ")");
+            auto r = derive_master_public_key(dst_entr.addr.m_spend_public_key, out_eph_public_key);
+            CHECK_AND_ASSERT_MES(r, false, "at creation outs: failed to derive_public_key("<< dst_entr.addr.m_spend_public_key << ")");
 
             return r;
         }
 
         bool  device_default::encrypt_payment_id(crypto::hash8 &payment_id, const crypto::public_key &public_key, const crypto::secret_key &secret_key) {
-            crypto::key_derivation derivation;
+            crypto::derived_public_key derivation;
             crypto::hash hash;
             char data[33]; /* A hash, and an extra byte */
 

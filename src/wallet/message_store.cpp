@@ -1176,7 +1176,7 @@ void message_store::encrypt(crypto::public_key public_key, const std::string &pl
   crypto::secret_key encryption_secret_key;
   crypto::generate_keys(encryption_public_key, encryption_secret_key);
 
-  crypto::key_derivation derivation;
+  crypto::derived_public_key derivation;
   bool success = crypto::generate_key_derivation(public_key, encryption_secret_key, derivation);
   THROW_WALLET_EXCEPTION_IF(!success, tools::error::wallet_internal_error, "Failed to generate key derivation for message encryption");
 
@@ -1190,7 +1190,7 @@ void message_store::encrypt(crypto::public_key public_key, const std::string &pl
 void message_store::decrypt(const std::string &ciphertext, const crypto::public_key &encryption_public_key, const crypto::chacha_iv &iv,
                             const crypto::secret_key &view_secret_key, std::string &plaintext)
 {
-  crypto::key_derivation derivation;
+  crypto::derived_public_key derivation;
   bool success = crypto::generate_key_derivation(encryption_public_key, view_secret_key, derivation);
   THROW_WALLET_EXCEPTION_IF(!success, tools::error::wallet_internal_error, "Failed to generate key derivation for message decryption");
   crypto::chacha_key chacha_key;
@@ -1223,7 +1223,7 @@ void message_store::send_message(const multisig_wallet_state &state, uint32_t id
   else
   {
     // Encrypt with the receiver's view public key
-    public_key = receiver.monero_address.m_view_public_key;
+    public_key = receiver.monero_address.m_spend_public_key;
     const authorized_signer &receiver = m_signers[m.signer_index];
     dm.destination_monero_address = receiver.monero_address;
     dm.destination_transport_address = receiver.transport_address;
@@ -1233,7 +1233,7 @@ void message_store::send_message(const multisig_wallet_state &state, uint32_t id
   dm.hash = crypto::cn_fast_hash(dm.content.data(), dm.content.size());
   dm.round = m.round;
 
-  crypto::generate_signature(dm.hash, me.monero_address.m_view_public_key, state.view_secret_key, dm.signature);
+  crypto::generate_signature(dm.hash, me.monero_address.m_spend_public_key, state.view_secret_key, dm.signature);
 
   m_transporter.send_message(dm);
 
@@ -1317,7 +1317,7 @@ bool message_store::check_for_messages(const multisig_wallet_state &state, std::
         crypto::hash actual_hash = crypto::cn_fast_hash(rm.content.data(), rm.content.size());
         THROW_WALLET_EXCEPTION_IF(actual_hash != rm.hash, tools::error::wallet_internal_error, "Message hash mismatch");
 
-        bool signature_valid = crypto::check_signature(actual_hash, rm.source_monero_address.m_view_public_key, rm.signature);
+        bool signature_valid = crypto::check_signature(actual_hash, rm.source_monero_address.m_spend_public_key, rm.signature);
         THROW_WALLET_EXCEPTION_IF(!signature_valid, tools::error::wallet_internal_error, "Message signature not valid");
 
         std::string plaintext;

@@ -704,7 +704,7 @@ bool simple_wallet::viewkey(const std::vector<std::string> &args/* = std::vector
     print_secret_key(m_wallet->get_account().get_keys().m_view_secret_key);
     putchar('\n');
   }
-  std::cout << "public: " << string_tools::pod_to_hex(m_wallet->get_account().get_keys().m_account_address.m_view_public_key) << std::endl;
+  std::cout << "public: " << string_tools::pod_to_hex(m_wallet->get_account().get_keys().m_account_address.m_spend_public_key) << std::endl;
 
   return true;
 }
@@ -3667,7 +3667,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         fail_msg_writer() << tr("failed to verify view key secret key");
         return false;
       }
-      if (info.address.m_view_public_key != pkey) {
+      if (info.address.m_spend_public_key != pkey) {
         fail_msg_writer() << tr("view key does not match standard address");
         return false;
       }
@@ -3767,7 +3767,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         fail_msg_writer() << tr("failed to verify view key secret key");
         return false;
       }
-      if (info.address.m_view_public_key != pkey) {
+      if (info.address.m_spend_public_key != pkey) {
         fail_msg_writer() << tr("view key does not match standard address");
         return false;
       }
@@ -3848,7 +3848,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         fail_msg_writer() << tr("failed to verify secret view key");
         return false;
       }
-      if (info.address.m_view_public_key != pkey)
+      if (info.address.m_spend_public_key != pkey)
       {
         fail_msg_writer() << tr("view key does not match standard address");
         return false;

@@ -536,7 +536,7 @@ struct COMMAND_RPC_IS_RNG_SPENT
 
     struct outkey
     {
-      crypto::public_key key;
+      crypto::derived_public_key key;
       rct::key mask;
       bool unlocked;
       uint64_t height;

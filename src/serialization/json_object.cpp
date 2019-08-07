@@ -498,7 +498,6 @@ void toJsonValue(rapidjson::Document& doc, const cryptonote::tx_out& txout, rapi
   val.SetObject();
 
   INSERT_INTO_JSON_OBJECT(val, doc, amount, txout.amount);
-  INSERT_INTO_JSON_OBJECT(val, doc, random, txout.random); // Serialization changes.
 
   struct add_output
   {
@@ -540,10 +539,6 @@ void fromJsonValue(const rapidjson::Value& val, cryptonote::tx_out& txout)
     if (elem.name == "amount")
     {
       fromJsonValue(elem.value, txout.amount);
-    }
-    if(elem.name == "random")
-    {
-        fromJsonValue(elem.value, txout.random);
     }
     if (elem.name == "to_key")
     {

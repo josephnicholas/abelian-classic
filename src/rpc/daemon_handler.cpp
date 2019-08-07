@@ -758,7 +758,7 @@ namespace rpc
     {
       for (const auto& i : req.outputs)
       {
-        crypto::public_key key;
+        crypto::derived_public_key key;
         rct::key mask;
         bool unlocked;
         m_core.get_blockchain_storage().get_output_key_mask_unlocked(i.amount, i.index, key, mask, unlocked);

@@ -278,7 +278,7 @@ private:
       END_SERIALIZE()
     };
 
-    struct tx_scan_info_t
+    struct  tx_scan_info_t
     {
       cryptonote::keypair in_ephemeral;
       crypto::key_image ki;
@@ -289,8 +289,6 @@ private:
       boost::optional<cryptonote::subaddress_receive_info> received;
 
       tx_scan_info_t(): amount(0), money_transfered(0), error(true) {}
-      // Random bytes
-      crypto::random_key random;
     };
 
     struct transfer_details
@@ -318,13 +316,12 @@ private:
 
       bool is_rct() const { return m_rct; }
       uint64_t amount() const { return m_amount; }
-      const crypto::public_key &get_public_key() const { return boost::get<const cryptonote::txout_to_key>(m_tx.vout[m_internal_output_index].target).key; }
+      const crypto::derived_public_key &get_public_key() const { return boost::get<const cryptonote::txout_to_key>(m_tx.vout[m_internal_output_index].target).key; }
 
       //RNG
       bool m_rng_key_known;
       bool m_rng_key_partial;
       crypto::random_key m_rng_key;
-      const crypto::random_key &get_rng_key() const {return boost::get<const crypto::random_key>(m_tx.vout[m_internal_output_index].random);}
 
       BEGIN_SERIALIZE_OBJECT()
         FIELD(m_block_height)
@@ -569,7 +566,7 @@ private:
     struct is_out_data
     {
       crypto::public_key pkey;
-      crypto::key_derivation derivation;
+      crypto::derived_public_key derivation;
       std::vector<boost::optional<cryptonote::subaddress_receive_info>> received;
     };
 
@@ -1067,8 +1064,8 @@ private:
     void set_tx_key(const crypto::hash &txid, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys);
     bool get_tx_key(const crypto::hash &txid, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys);
     void check_tx_key(const crypto::hash &txid, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, const cryptonote::account_public_address &address, uint64_t &received, bool &in_pool, uint64_t &confirmations);
-    void check_tx_key_helper(const crypto::hash &txid, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, const cryptonote::account_public_address &address, uint64_t &received, bool &in_pool, uint64_t &confirmations);
-    void check_tx_key_helper(const cryptonote::transaction &tx, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, const cryptonote::account_public_address &address, uint64_t &received) const;
+    void check_tx_key_helper(const crypto::hash &txid, const crypto::derived_public_key &derivation, const std::vector<crypto::derived_public_key> &additional_derivations, const cryptonote::account_public_address &address, uint64_t &received, bool &in_pool, uint64_t &confirmations);
+    void check_tx_key_helper(const cryptonote::transaction &tx, const crypto::derived_public_key &derivation, const std::vector<crypto::derived_public_key> &additional_derivations, const cryptonote::account_public_address &address, uint64_t &received) const;
     std::string get_tx_proof(const crypto::hash &txid, const cryptonote::account_public_address &address, bool is_subaddress, const std::string &message);
     std::string get_tx_proof(const cryptonote::transaction &tx, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, const cryptonote::account_public_address &address, bool is_subaddress, const std::string &message) const;
     bool check_tx_proof(const crypto::hash &txid, const cryptonote::account_public_address &address, bool is_subaddress, const std::string &message, const std::string &sig_str, uint64_t &received, bool &in_pool, uint64_t &confirmations);
@@ -1377,9 +1374,9 @@ private:
     bool generate_chacha_key_from_secret_keys(crypto::chacha_key &key) const;
     void generate_chacha_key_from_password(const epee::wipeable_string &pass, crypto::chacha_key &key) const;
     crypto::hash get_payment_id(const pending_tx &ptx) const;
-    void check_acc_out_precomp(const cryptonote::tx_out &o, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, size_t i, tx_scan_info_t &tx_scan_info) const;
-    void check_acc_out_precomp(const cryptonote::tx_out &o, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, size_t i, const is_out_data *is_out_data, tx_scan_info_t &tx_scan_info) const;
-    void check_acc_out_precomp_once(const cryptonote::tx_out &o, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, size_t i, const is_out_data *is_out_data, tx_scan_info_t &tx_scan_info, bool &already_seen) const;
+    void check_acc_out_precomp(const cryptonote::tx_out &o, const crypto::derived_public_key &derivation, const std::vector<crypto::derived_public_key> &additional_derivations, size_t i, tx_scan_info_t &tx_scan_info) const;
+    void check_acc_out_precomp(const cryptonote::tx_out &o, const crypto::derived_public_key &derivation, const std::vector<crypto::derived_public_key> &additional_derivations, size_t i, const is_out_data *is_out_data, tx_scan_info_t &tx_scan_info) const;
+    void check_acc_out_precomp_once(const cryptonote::tx_out &o, const crypto::derived_public_key &derivation, const std::vector<crypto::derived_public_key> &additional_derivations, size_t i, const is_out_data *is_out_data, tx_scan_info_t &tx_scan_info, bool &already_seen) const;
     void parse_block_round(const cryptonote::blobdata &blob, cryptonote::block &bl, crypto::hash &bl_id, bool &error) const;
     uint64_t get_upper_transaction_weight_limit() const;
     std::vector<uint64_t> get_unspent_amounts_vector() const;
@@ -1455,11 +1452,11 @@ private:
     transfer_container m_transfers;
     payment_container m_payments;
     std::unordered_map<crypto::key_image, size_t> m_key_images;
-    std::unordered_map<crypto::public_key, size_t> m_pub_keys;
+    std::unordered_map<crypto::derived_public_key, size_t> m_pub_keys;
     // Add an additional field for rand ID checking.
     std::unordered_map<crypto::random_key, size_t> m_tx_rng;
     cryptonote::account_public_address m_account_public_address;
-    std::unordered_map<crypto::public_key, cryptonote::subaddress_index> m_subaddresses;
+    std::unordered_map<crypto::derived_public_key, cryptonote::subaddress_index> m_subaddresses;
     std::vector<std::vector<std::string>> m_subaddress_labels;
     std::unordered_map<crypto::hash, std::string> m_tx_notes;
     std::unordered_map<std::string, std::string> m_attributes;

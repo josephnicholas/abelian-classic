@@ -84,7 +84,7 @@ namespace cryptonote
     tx.vout.clear();
     tx.extra.clear();
 
-    keypair txkey = keypair::generate(hw::get_device("default"));
+    keypair txkey = keypair::generate(hw::get_device("default")); // We don't need to generate a new keypair we just derive the stealth address from MPK.
     add_tx_pub_key_to_extra(tx, txkey.pub);
     if(!extra_nonce.empty())
       if(!add_extra_nonce_to_tx_extra(tx.extra, extra_nonce))
@@ -148,21 +148,21 @@ namespace cryptonote
     uint64_t summary_amounts = 0;
     for (size_t no = 0; no < out_amounts.size(); no++)
     {
-      crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);;
-      crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
-      bool r = crypto::generate_key_derivation(miner_address.m_view_public_key, txkey.sec, derivation);
-      CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << miner_address.m_view_public_key << " ---- " << txkey.sec << ")");
+      crypto::derived_public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
+      //crypto::generate_key_derivation(miner_address.m_view_public_key, txkey.sec, derivation);
+      //CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << miner_address.m_view_public_key << " ---- " << txkey.sec << ")");
 
-      r = crypto::derive_public_key(derivation, no, miner_address.m_spend_public_key, out_eph_public_key);
-      CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << derivation << " ---- " << no << " ---- "<< miner_address.m_spend_public_key << ")");
+      auto r = crypto::derive_master_public_key(miner_address.m_spend_public_key, out_eph_public_key);
+      CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << out_eph_public_key << " ---- " << no << " ---- "<< miner_address.m_spend_public_key << ")");
 
       txout_to_key tk;
-      tk.key = out_eph_public_key;
+      //tk.key = out_eph_public_key;
 
       tx_out out;
+      out.stealth_address = out_eph_public_key;
       summary_amounts += out.amount = out_amounts[no];
       out.target = tk;
-      //dilithium_randombytes((unsigned char *)&out.random, 32U);
+
       tx.vout.push_back(out);
     }
 
@@ -187,7 +187,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   crypto::public_key get_destination_view_key_pub(const std::vector<tx_destination_entry> &destinations, const boost::optional<cryptonote::account_public_address>& change_addr)
   {
-    account_public_address addr = {null_pkey, null_pkey};
+    account_public_address addr = {null_pkey};//, null_pkey};
     size_t count = 0;
     for (const auto &i : destinations)
     {
@@ -203,8 +203,8 @@ namespace cryptonote
       ++count;
     }
     if (count == 0 && change_addr)
-      return change_addr->m_view_public_key;
-    return addr.m_view_public_key;
+      return change_addr->m_spend_public_key;
+    return addr.m_spend_public_key;
   }
   //---------------------------------------------------------------
   bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, std::vector<uint8_t> extra,
@@ -419,7 +419,7 @@ namespace cryptonote
     for(const tx_destination_entry& dst_entr: destinations)
     {
       CHECK_AND_ASSERT_MES(dst_entr.amount > 0 || tx.version > 1, false, "Destination with wrong amount: " << dst_entr.amount);
-      crypto::public_key out_eph_public_key;
+      crypto::derived_public_key out_eph_public_key;
 
       hwdev.generate_output_ephemeral_keys(tx.version,sender_account_keys, txkey_pub, tx_key,
                                            dst_entr, change_addr, output_index,
@@ -431,7 +431,6 @@ namespace cryptonote
       txout_to_key tk;
       tk.key = out_eph_public_key;
       out.target = tk;
-//      dilithium_randombytes((unsigned char *)&out.random, 32U);
       tx.vout.push_back(out);
       output_index++;
       summary_outs_money += dst_entr.amount;
@@ -734,7 +733,7 @@ namespace cryptonote
       for(const tx_destination_entry& dst_entr: destinations)
       {
           CHECK_AND_ASSERT_MES(dst_entr.amount > 0 || tx.version > 1, false, "Destination with wrong amount: " << dst_entr.amount);
-          crypto::public_key out_eph_public_key;
+          crypto::derived_public_key out_eph_public_key;
 
           hwdev.generate_output_ephemeral_keys(tx.version,sender_account_keys, txkey_pub, tx_key,
                                                dst_entr, change_addr, output_index,
@@ -746,7 +745,7 @@ namespace cryptonote
           txout_to_key tk;
           tk.key = out_eph_public_key;
           out.target = tk;
-//          dilithium_randombytes((unsigned char *)&out.random, 32U);
+
           tx.vout.push_back(out);
           output_index++;
           summary_outs_money += dst_entr.amount;
@@ -939,7 +938,5 @@ namespace cryptonote
       std::string tx_hex = ss.str();
       std::cout << "Insert this line into your coin configuration file: " << std::endl;
       std::cout << "std::string const GENESIS_TX = \"" << string_tools::buff_to_hex_nodelimer(tx_hex) << "\";" << std::endl;
-
-      return;
   }
 }

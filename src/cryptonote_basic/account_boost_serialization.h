@@ -50,7 +50,7 @@ namespace boost
     inline void serialize(Archive &a, cryptonote::account_public_address &x, const boost::serialization::version_type ver)
     {
       a & x.m_spend_public_key;
-      a & x.m_view_public_key;
+//      a & x.m_view_public_key;
     }
 
   }

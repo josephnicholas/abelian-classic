@@ -484,7 +484,7 @@ namespace cryptonote
      *
      * @return the public key
      */
-    crypto::public_key get_output_key(uint64_t amount, uint64_t global_index) const;
+    crypto::derived_public_key get_output_key(uint64_t amount, uint64_t global_index) const;
 
     /**
      * @brief gets specific outputs to mix with
@@ -510,7 +510,7 @@ namespace cryptonote
      * @param key out - the output's key
      * @param unlocked out - the output's unlocked state
      */
-    void get_output_key_mask_unlocked(const uint64_t& amount, const uint64_t& index, crypto::public_key& key, rct::key& mask, bool& unlocked) const;
+    void get_output_key_mask_unlocked(const uint64_t& amount, const uint64_t& index, crypto::derived_public_key& key, rct::key& mask, bool& unlocked) const;
 
     /**
      * @brief gets per block distribution of outputs of a given amount

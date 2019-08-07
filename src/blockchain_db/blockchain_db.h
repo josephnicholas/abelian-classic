@@ -113,10 +113,10 @@ extern const command_line::arg_descriptor<bool, false> arg_db_salvage;
  */
 struct output_data_t
 {
-  crypto::public_key pubkey;       //!< the output's public key (for spend verification)
-  uint64_t           unlock_time;  //!< the output's unlock time (or height)
-  uint64_t           height;       //!< the height of the block which created the output
-  rct::key           commitment;   //!< the output's amount commitment (for spend verification)
+  crypto::derived_public_key  pubkey;       //!< the output's public key (for spend verification)
+  uint64_t                    unlock_time;  //!< the output's unlock time (or height)
+  uint64_t                    height;       //!< the height of the block which created the output
+  rct::key                    commitment;   //!< the output's amount commitment (for spend verification)
 };
 #pragma pack(pop)
 
