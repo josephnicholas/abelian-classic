@@ -91,7 +91,7 @@ namespace cryptonote
     subaddress_index index;
     crypto::derived_public_key derivation;
   };
-  boost::optional<subaddress_receive_info> is_out_to_acc_precomp(const account_keys& acc, const std::unordered_map<crypto::derived_public_key, subaddress_index>& subaddresses, const crypto::derived_public_key& out_key, const crypto::derived_public_key & derivation, const std::vector<crypto::derived_public_key>& additional_derivations, size_t output_index, hw::device &hwdev);
+  boost::optional<subaddress_receive_info> is_out_to_acc_precomp(const account_keys& acc, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, const crypto::derived_public_key& out_key, const crypto::derived_public_key & derivation, const std::vector<crypto::derived_public_key>& additional_derivations, size_t output_index, hw::device &hwdev);
   bool lookup_acc_outs(const account_keys& acc, const transaction& tx, const crypto::derived_public_key& tx_pub_key, const std::vector<crypto::derived_public_key>& additional_tx_public_keys, std::vector<size_t>& outs, uint64_t& money_transfered);
   bool lookup_acc_outs(const account_keys& acc, const transaction& tx, std::vector<size_t>& outs, uint64_t& money_transfered);
   bool get_tx_fee(const transaction& tx, uint64_t & fee);

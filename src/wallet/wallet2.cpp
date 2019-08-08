@@ -1400,10 +1400,10 @@ void wallet2::expand_subaddresses(const cryptonote::subaddress_index& index)
     for (index2.major = m_subaddress_labels.size(); index2.major < major_end; ++index2.major)
     {
       const uint32_t end = get_subaddress_clamped_sum((index2.major == index.major ? index.minor : 0), m_subaddress_lookahead_minor);
-      const std::vector<crypto::derived_public_key> pkeys = hwdev.get_subaddress_spend_public_keys(m_account.get_keys(), index2.major, 0, end);
+      const auto pkeys = hwdev.get_subaddress_spend_public_keys(m_account.get_keys(), index2.major, 0, end);
       for (index2.minor = 0; index2.minor < end; ++index2.minor)
       {
-         const crypto::derived_public_key &D = pkeys[index2.minor];
+         const auto &D = pkeys[index2.minor];
          m_subaddresses[D] = index2;
       }
     }
@@ -1417,10 +1417,10 @@ void wallet2::expand_subaddresses(const cryptonote::subaddress_index& index)
     const uint32_t end = get_subaddress_clamped_sum(index.minor, m_subaddress_lookahead_minor);
     const uint32_t begin = m_subaddress_labels[index.major].size();
     cryptonote::subaddress_index index2 = {index.major, begin};
-    const std::vector<crypto::derived_public_key> pkeys = hwdev.get_subaddress_spend_public_keys(m_account.get_keys(), index2.major, index2.minor, end);
+    const auto pkeys = hwdev.get_subaddress_spend_public_keys(m_account.get_keys(), index2.major, index2.minor, end);
     for (; index2.minor < end; ++index2.minor)
     {
-       const crypto::derived_public_key &D = pkeys[index2.minor - begin];
+       const auto &D = pkeys[index2.minor - begin];
        m_subaddresses[D] = index2;
     }
     m_subaddress_labels[index.major].resize(index.minor + 1);
@@ -8657,13 +8657,9 @@ bool wallet2::sanity_check(const std::vector<wallet2::pending_tx> &ptx_vector, s
   {
     if (ptx.change_dts.amount == 0)
       continue;
-    for (const auto &ptx_out : ptx.tx.vout)
-    {
-      THROW_WALLET_EXCEPTION_IF(m_subaddresses.find(boost::get<cryptonote::txout_to_key>(ptx_out.target).key) == m_subaddresses.end(), error::wallet_internal_error, "Change address is not ours");
-
+      THROW_WALLET_EXCEPTION_IF(m_subaddresses.find(ptx.change_dts.addr.m_spend_public_key) == m_subaddresses.end(), error::wallet_internal_error, "Change address is not ours");
       required[ptx.change_dts.addr].first += ptx.change_dts.amount;
       required[ptx.change_dts.addr].second = ptx.change_dts.is_subaddress;
-    }
   }
 
   for (const auto &r: required)

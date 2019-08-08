@@ -275,8 +275,8 @@ namespace cryptonote
       }
     }
 
-    boost::optional<subaddress_receive_info> subaddr_recv_info = is_out_to_acc_precomp(ack, subaddresses, out_key, recv_derivation, additional_recv_derivations, real_output_index,hwdev);
-    CHECK_AND_ASSERT_MES(subaddr_recv_info, false, "key image helper: given output pubkey doesn't seem to belong to this address");
+    //boost::optional<subaddress_receive_info> subaddr_recv_info = is_out_to_acc_precomp(ack, subaddresses, out_key, recv_derivation, additional_recv_derivations, real_output_index,hwdev);
+    //CHECK_AND_ASSERT_MES(subaddr_recv_info, false, "key image helper: given output pubkey doesn't seem to belong to this address");
 
     return true;//generate_key_image_helper_precomp(ack, out_key, subaddr_recv_info->derivation, real_output_index, subaddr_recv_info->index, in_ephemeral, ki, hwdev);
   }
@@ -862,12 +862,12 @@ namespace cryptonote
     return false;
   }
   //---------------------------------------------------------------
-  boost::optional<subaddress_receive_info> is_out_to_acc_precomp(const account_keys& acc, const std::unordered_map<crypto::derived_public_key, subaddress_index>& subaddresses, const crypto::derived_public_key& out_key, const crypto::derived_public_key & derivation, const std::vector<crypto::derived_public_key>& additional_derivations, size_t output_index, hw::device &hwdev)
+  boost::optional<subaddress_receive_info> is_out_to_acc_precomp(const account_keys& acc, const std::unordered_map<crypto::public_key, subaddress_index>& subaddresses, const crypto::derived_public_key& out_key, const crypto::derived_public_key & derivation, const std::vector<crypto::derived_public_key>& additional_derivations, size_t output_index, hw::device &hwdev)
   {
     // try the shared tx pubkey
     // subaddress_spendkey is derived from MPK, so this is a full blown subaddr
-    crypto::derived_public_key subaddress_spendkey{};
-    hwdev.derive_master_public_key(acc.m_account_address.m_spend_public_key, subaddress_spendkey);
+    auto subaddress_spendkey = null_pkey;
+    subaddress_spendkey = acc.m_account_address.m_spend_public_key;
     auto found = subaddresses.find(subaddress_spendkey);
 
     // if subaddress spendkey is found in the list of subbaddresses
@@ -880,7 +880,6 @@ namespace cryptonote
     if (!additional_derivations.empty())
     {
       CHECK_AND_ASSERT_MES(output_index < additional_derivations.size(), boost::none, "wrong number of additional derivations");
-      hwdev.derive_master_public_key(acc.m_account_address.m_spend_public_key, subaddress_spendkey);
       found = subaddresses.find(subaddress_spendkey);
       if (found != subaddresses.end())
         return subaddress_receive_info{ found->second, additional_derivations[output_index] };

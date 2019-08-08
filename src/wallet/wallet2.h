@@ -1360,7 +1360,7 @@ private:
     // Add an additional field for rand ID checking.
     std::unordered_map<crypto::random_key, size_t> m_tx_rng;
     cryptonote::account_public_address m_account_public_address;
-    std::unordered_map<crypto::derived_public_key, cryptonote::subaddress_index> m_subaddresses;
+    std::unordered_map<crypto::public_key, cryptonote::subaddress_index> m_subaddresses;
     std::vector<std::vector<std::string>> m_subaddress_labels;
     std::unordered_map<crypto::hash, std::string> m_tx_notes;
     std::unordered_map<std::string, std::string> m_attributes;

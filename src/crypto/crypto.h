@@ -69,6 +69,10 @@ namespace crypto {
       char data[32]; // We need to agree on this!
   };
 
+  POD_CLASS derived_public_key {
+      std::array<char, SIZE_DPK> buffer;
+  };
+
   using secret_key = epee::mlocked<tools::scrubbed<ec_scalar>>;
 
   using rand_key = epee::mlocked<tools::scrubbed<random_key>>;
@@ -87,10 +91,6 @@ namespace crypto {
     int cols;
     int rows;
     std::vector<secret_keyV> column_vectors;
-  };
-
-  POD_CLASS derived_public_key {
-      std::array<char, SIZE_DPK> buffer;
   };
 
   POD_CLASS key_image: ec_point {
@@ -340,8 +340,8 @@ namespace crypto {
 }
 
 CRYPTO_MAKE_HASHABLE(public_key)
-CRYPTO_MAKE_HASHABLE(derived_public_key)
 CRYPTO_MAKE_HASHABLE_CONSTANT_TIME(secret_key)
 CRYPTO_MAKE_HASHABLE(key_image)
 CRYPTO_MAKE_HASHABLE(random_key)
+CRYPTO_MAKE_HASHABLE(derived_public_key)
 CRYPTO_MAKE_COMPARABLE(signature)
