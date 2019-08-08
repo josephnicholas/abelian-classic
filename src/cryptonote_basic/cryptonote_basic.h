@@ -145,12 +145,10 @@ namespace cryptonote
   {
     uint64_t amount;
     txout_target_v target;
-    crypto::derived_public_key stealth_address;
 
     BEGIN_SERIALIZE_OBJECT()
       VARINT_FIELD(amount)
       FIELD(target)
-      FIELD(stealth_address)
     END_SERIALIZE()
 
 
