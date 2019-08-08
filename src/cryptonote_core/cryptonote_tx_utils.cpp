@@ -84,8 +84,9 @@ namespace cryptonote
     tx.vout.clear();
     tx.extra.clear();
 
-    keypair txkey = keypair::generate(hw::get_device("default")); // We don't need to generate a new keypair we just derive the stealth address from MPK.
-    add_tx_pub_key_to_extra(tx, txkey.pub);
+    auto transactionPublicKey = null_dPkey;
+    auto result = crypto::derive_master_public_key(miner_address.m_spend_public_key, transactionPublicKey);
+    add_tx_pub_key_to_extra(tx, transactionPublicKey);
     if(!extra_nonce.empty())
       if(!add_extra_nonce_to_tx_extra(tx.extra, extra_nonce))
         return false;
@@ -228,7 +229,7 @@ namespace cryptonote
     tx.unlock_time = unlock_time;
 
     tx.extra = extra;
-    crypto::public_key txkey_pub;
+    auto txkey_pub = null_dPkey;
 
     // if we have a stealth payment id, find it and encrypt it with the tx key now
     std::vector<tx_extra_field> tx_extra_fields;
@@ -341,7 +342,8 @@ namespace cryptonote
 
       std::copy(src_entr.outputs[src_entr.real_output].second.buffer.begin(), src_entr.outputs[src_entr.real_output].second.buffer.end(), in_ephemeral.pub.buffer.begin());
       //check that derivated key is equal with real output key (if non multisig)
-      if(!msout && !(in_ephemeral.pub == src_entr.outputs[src_entr.real_output].second) )
+      // This might not be necessary for SALRS
+     /* if(!msout && !(in_ephemeral.pub == src_entr.outputs[src_entr.real_output].second) )
       {
         LOG_ERROR("derived public key mismatch with output public key at index " << idx << ", real out " << src_entr.real_output << "! "<< ENDL << "derived_key:"
           << string_tools::pod_to_hex(in_ephemeral.pub) << ENDL << "real output_public_key:"
@@ -349,7 +351,7 @@ namespace cryptonote
         LOG_ERROR("amount " << src_entr.amount << ", rct " << src_entr.rct);
         LOG_ERROR("tx pubkey " << src_entr.real_out_tx_key << ", real_output_in_tx_index " << src_entr.real_output_in_tx_index);
         return false;
-      }
+      }*/
 
       //put key image into tx input
       txin_to_key input_to_key;
@@ -391,7 +393,8 @@ namespace cryptonote
     classify_addresses(destinations, change_addr, num_stdaddresses, num_subaddresses, single_dest_subaddress);
 
     // if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
-    if (num_stdaddresses == 0 && num_subaddresses == 1)
+    /* TODO
+     if (num_stdaddresses == 0 && num_subaddresses == 1)
     {
       txkey_pub = rct::rct2pk(hwdev.scalarmultKey(rct::pk2rct(single_dest_subaddress.m_spend_public_key), rct::sk2rct(tx_key)));
     }
@@ -399,10 +402,11 @@ namespace cryptonote
     {
       txkey_pub = rct::rct2pk(hwdev.scalarmultBase(rct::sk2rct(tx_key)));
     }
+     */
     remove_field_from_tx_extra(tx.extra, typeid(tx_extra_pub_key));
     add_tx_pub_key_to_extra(tx, txkey_pub);
 
-    std::vector<crypto::public_key> additional_tx_public_keys;
+    std::vector<crypto::derived_public_key> additional_tx_public_keys;
 
     // we don't need to include additional tx keys if:
     //   - all the destinations are standard addresses
@@ -419,10 +423,12 @@ namespace cryptonote
       CHECK_AND_ASSERT_MES(dst_entr.amount > 0 || tx.version > 1, false, "Destination with wrong amount: " << dst_entr.amount);
       crypto::derived_public_key out_eph_public_key;
 
-      hwdev.generate_output_ephemeral_keys(tx.version,sender_account_keys, txkey_pub, tx_key,
-                                           dst_entr, change_addr, output_index,
-                                           need_additional_txkeys, additional_tx_keys,
-                                           additional_tx_public_keys, amount_keys, out_eph_public_key);
+      //hwdev.generate_output_ephemeral_keys(tx.version,sender_account_keys, txkey_pub, tx_key,
+      //                                     dst_entr, change_addr, output_index,
+      //                                     need_additional_txkeys, additional_tx_keys,
+      //                                     additional_tx_public_keys, amount_keys, out_eph_public_key);
+
+      hwdev.derive_master_public_key(dst_entr.addr.m_spend_public_key, out_eph_public_key);
 
       tx_out out;
       out.amount = dst_entr.amount;
@@ -478,7 +484,7 @@ namespace cryptonote
       for(const tx_source_entry& src_entr:  sources)
       {
         ss_ring_s << "pub_keys:" << ENDL;
-        std::vector<const crypto::public_key*> keys_ptrs;
+        std::vector<const crypto::derived_public_key*> keys_ptrs;
         std::vector<crypto::public_key> keys(src_entr.outputs.size());
         size_t ii = 0;
         for(const tx_source_entry::output_entry& o: src_entr.outputs)
@@ -516,7 +522,7 @@ namespace cryptonote
   }
   //---------------------------------------------------------------
   bool construct_tx_with_tx_key(const account_keys& sender_account_keys, const std::unordered_map<crypto::derived_public_key, subaddress_index>& subaddresses, std::vector<tx_source_entry>& sources, std::vector<tx_destination_entry>& destinations, const boost::optional<cryptonote::account_public_address>& change_addr, const std::vector<uint8_t> &extra,
-                                transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const crypto::public_key &tx_pub_key, const std::vector<crypto::secret_key> &additional_tx_keys, bool rct, const rct::RCTConfig &rct_config, rct::multisig_out *msout, bool shuffle_outs)
+                                transaction& tx, uint64_t unlock_time, const crypto::secret_key &tx_key, const crypto::derived_public_key &tx_pub_key, const std::vector<crypto::secret_key> &additional_tx_keys, bool rct, const rct::RCTConfig &rct_config, rct::multisig_out *msout, bool shuffle_outs)
   {
       hw::device &hwdev = sender_account_keys.get_device();
 
@@ -538,7 +544,7 @@ namespace cryptonote
       tx.unlock_time = unlock_time;
 
       tx.extra = std::move(extra);
-      crypto::public_key txkey_pub = tx_pub_key;
+      auto  txkey_pub = tx_pub_key;
 
       // if we have a stealth payment id, find it and encrypt it with the tx key now
       std::vector<tx_extra_field> tx_extra_fields;
@@ -649,7 +655,7 @@ namespace cryptonote
           }
 
           //check that derivated key is equal with real output key (if non multisig)
-          if(!msout && !(in_ephemeral.pub == src_entr.outputs[src_entr.real_output].second) )
+          /*if(!msout && !(in_ephemeral.pub == src_entr.outputs[src_entr.real_output].second) )
           {
               LOG_ERROR("derived public key mismatch with output public key at index " << idx << ", real out " << src_entr.real_output << "! "<< ENDL << "derived_key:"
                                                                                        << string_tools::pod_to_hex(in_ephemeral.pub) << ENDL << "real output_public_key:"
@@ -657,7 +663,7 @@ namespace cryptonote
               LOG_ERROR("amount " << src_entr.amount << ", rct " << src_entr.rct);
               LOG_ERROR("tx pubkey " << src_entr.real_out_tx_key << ", real_output_in_tx_index " << src_entr.real_output_in_tx_index);
               return false;
-          }
+          }*/
 
           //put key image into tx input
           txin_to_key input_to_key;
@@ -703,20 +709,20 @@ namespace cryptonote
       // TODO: Will probably be look on where this heads to
       if(rct)
       {
-          LOG_PRINT_L0("Version is RCT");
-          if (num_stdaddresses == 0 && num_subaddresses == 1){
+         LOG_PRINT_L0("Version is RCT");
+         /* TODO if (num_stdaddresses == 0 && num_subaddresses == 1){
               txkey_pub = rct::rct2pk(hwdev.scalarmultKey(rct::pk2rct(single_dest_subaddress.m_spend_public_key), rct::sk2rct(tx_key)));
           }
           else
           {
               txkey_pub = rct::rct2pk(hwdev.scalarmultBase(rct::sk2rct(tx_key)));
-          }
+          }*/
       }
 
       remove_field_from_tx_extra(tx.extra, typeid(tx_extra_pub_key));
       add_tx_pub_key_to_extra(tx, txkey_pub);
 
-      std::vector<crypto::public_key> additional_tx_public_keys;
+      std::vector<crypto::derived_public_key> additional_tx_public_keys;
 
       // we don't need to include additional tx keys if:
       //   - all the destinations are standard addresses
@@ -733,10 +739,13 @@ namespace cryptonote
           CHECK_AND_ASSERT_MES(dst_entr.amount > 0 || tx.version > 1, false, "Destination with wrong amount: " << dst_entr.amount);
           crypto::derived_public_key out_eph_public_key;
 
-          hwdev.generate_output_ephemeral_keys(tx.version,sender_account_keys, txkey_pub, tx_key,
-                                               dst_entr, change_addr, output_index,
-                                               need_additional_txkeys, additional_tx_keys,
-                                               additional_tx_public_keys, amount_keys, out_eph_public_key);
+          //hwdev.generate_output_ephemeral_keys(tx.version,sender_account_keys, txkey_pub, tx_key,
+          //                                     dst_entr, change_addr, output_index,
+          //                                     need_additional_txkeys, additional_tx_keys,
+          //                                     additional_tx_public_keys, amount_keys, out_eph_public_key);
+
+
+          hwdev.derive_master_public_key(dst_entr.addr.m_spend_public_key, out_eph_public_key);
 
           tx_out out;
           out.amount = dst_entr.amount;
@@ -791,7 +800,7 @@ namespace cryptonote
           for(const tx_source_entry& src_entr:  sources)
           {
               ss_ring_s << "pub_keys:" << ENDL;
-              std::vector<const crypto::public_key*> keys_ptrs;
+              std::vector<const crypto::derived_public_key*> keys_ptrs;
               for(const tx_source_entry::output_entry& o: src_entr.outputs)
               {
                   keys_ptrs.push_back(&o.second);
@@ -830,9 +839,10 @@ namespace cryptonote
           transaction& tx, uint64_t unlock_time, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys, bool rct, const rct::RCTConfig &rct_config, rct::multisig_out *msout)
   {
     hw::device &hwdev = sender_account_keys.get_device();
-    crypto::public_key tx_pub_key{};
+    auto tx_pub_key = null_dPkey;
 
-    hwdev.open_tx(tx_key, tx_pub_key);
+    // This should ony accept MPK.
+    hwdev.open_tx(sender_account_keys.m_account_address.m_spend_public_key, tx_pub_key);
 
     // figure out if we need to make additional tx pubkeys
     size_t num_stdaddresses = 0;

@@ -277,7 +277,7 @@ namespace hw {
             return true;
         }
 
-        bool device_default::conceal_derivation(crypto::derived_public_key &derivation, const crypto::public_key &tx_pub_key, const std::vector<crypto::public_key> &additional_tx_pub_keys, const crypto::derived_public_key &main_derivation, const std::vector<crypto::derived_public_key> &additional_derivations){
+        bool device_default::conceal_derivation(crypto::derived_public_key &derivation, const crypto::derived_public_key &tx_pub_key, const std::vector<crypto::derived_public_key> &additional_tx_pub_keys, const crypto::derived_public_key &main_derivation, const std::vector<crypto::derived_public_key> &additional_derivations){
             return true;
         }
 
@@ -290,10 +290,8 @@ namespace hw {
             crypto::generate_tx_proof(prefix_hash, R, A, B, D, r, sig);
         }
 
-        bool device_default::open_tx(crypto::secret_key &tx_key) {
-            cryptonote::keypair txkey = cryptonote::keypair::generate(*this);
-            tx_key = txkey.sec;
-            return true;
+        bool device_default::open_tx(const crypto::public_key &master_pub_key, crypto::derived_public_key &tx_pub_key) {
+            return crypto::derive_master_public_key(master_pub_key, tx_pub_key) == 1;
         }
 
         bool device_default::open_tx(crypto::secret_key &tx_key, crypto::public_key &tx_pub_key) {

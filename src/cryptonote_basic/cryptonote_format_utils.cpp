@@ -589,47 +589,47 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
-  crypto::public_key get_tx_pub_key_from_extra(const std::vector<uint8_t>& tx_extra, size_t pk_index)
+  crypto::derived_public_key get_tx_pub_key_from_extra(const std::vector<uint8_t>& tx_extra, size_t pk_index)
   {
     std::vector<tx_extra_field> tx_extra_fields;
     parse_tx_extra(tx_extra, tx_extra_fields);
 
-    tx_extra_pub_key pub_key_field;
+    tx_extra_pub_key pub_key_field{};
     if(!find_tx_extra_field_by_type(tx_extra_fields, pub_key_field, pk_index))
-      return null_pkey;
+      return {};
 
     return pub_key_field.pub_key;
   }
   //---------------------------------------------------------------
-  crypto::public_key get_tx_pub_key_from_extra(const transaction_prefix& tx_prefix, size_t pk_index)
+  crypto::derived_public_key get_tx_pub_key_from_extra(const transaction_prefix& tx_prefix, size_t pk_index)
   {
     return get_tx_pub_key_from_extra(tx_prefix.extra, pk_index);
   }
   //---------------------------------------------------------------
-  crypto::public_key get_tx_pub_key_from_extra(const transaction& tx, size_t pk_index)
+  crypto::derived_public_key get_tx_pub_key_from_extra(const transaction& tx, size_t pk_index)
   {
     return get_tx_pub_key_from_extra(tx.extra, pk_index);
   }
   //---------------------------------------------------------------
-  bool add_tx_pub_key_to_extra(transaction& tx, const crypto::public_key& tx_pub_key)
+  bool add_tx_pub_key_to_extra(transaction& tx, const crypto::derived_public_key& tx_pub_key)
   {
     return add_tx_pub_key_to_extra(tx.extra, tx_pub_key);
   }
   //---------------------------------------------------------------
-  bool add_tx_pub_key_to_extra(transaction_prefix& tx, const crypto::public_key& tx_pub_key)
+  bool add_tx_pub_key_to_extra(transaction_prefix& tx, const crypto::derived_public_key& tx_pub_key)
   {
     return add_tx_pub_key_to_extra(tx.extra, tx_pub_key);
   }
   //---------------------------------------------------------------
-  bool add_tx_pub_key_to_extra(std::vector<uint8_t>& tx_extra, const crypto::public_key& tx_pub_key)
+  bool add_tx_pub_key_to_extra(std::vector<uint8_t>& tx_extra, const crypto::derived_public_key& tx_pub_key)
   {
-    tx_extra.resize(tx_extra.size() + 1 + sizeof(crypto::public_key));
-    tx_extra[tx_extra.size() - 1 - sizeof(crypto::public_key)] = TX_EXTRA_TAG_PUBKEY;
-    *reinterpret_cast<crypto::public_key*>(&tx_extra[tx_extra.size() - sizeof(crypto::public_key)]) = tx_pub_key;
+    tx_extra.resize(tx_extra.size() + 1 + sizeof(crypto::derived_public_key));
+    tx_extra[tx_extra.size() - 1 - sizeof(crypto::derived_public_key)] = TX_EXTRA_TAG_PUBKEY;
+    *reinterpret_cast<crypto::derived_public_key*>(&tx_extra[tx_extra.size() - sizeof(crypto::derived_public_key)]) = tx_pub_key;
     return true;
   }
   //---------------------------------------------------------------
-  std::vector<crypto::public_key> get_additional_tx_pub_keys_from_extra(const std::vector<uint8_t>& tx_extra)
+  std::vector<crypto::derived_public_key> get_additional_tx_pub_keys_from_extra(const std::vector<uint8_t>& tx_extra)
   {
     // parse
     std::vector<tx_extra_field> tx_extra_fields;
@@ -637,16 +637,18 @@ namespace cryptonote
     // find corresponding field
     tx_extra_additional_pub_keys additional_pub_keys;
     if(!find_tx_extra_field_by_type(tx_extra_fields, additional_pub_keys))
-      return {};
+    {
+      return {null_dPkey};
+    }
     return additional_pub_keys.data;
   }
   //---------------------------------------------------------------
-  std::vector<crypto::public_key> get_additional_tx_pub_keys_from_extra(const transaction_prefix& tx)
+  std::vector<crypto::derived_public_key> get_additional_tx_pub_keys_from_extra(const transaction_prefix& tx)
   {
     return get_additional_tx_pub_keys_from_extra(tx.extra);
   }
   //---------------------------------------------------------------
-  bool add_additional_tx_pub_keys_to_extra(std::vector<uint8_t>& tx_extra, const std::vector<crypto::public_key>& additional_pub_keys)
+  bool add_additional_tx_pub_keys_to_extra(std::vector<uint8_t>& tx_extra, const std::vector<crypto::derived_public_key>& additional_pub_keys)
   {
     // convert to variant
     tx_extra_field field = tx_extra_additional_pub_keys{ additional_pub_keys };
@@ -842,7 +844,7 @@ namespace cryptonote
     return res;
   }
   //---------------------------------------------------------------
-  bool is_out_to_acc(const account_keys& acc, const txout_to_key& out_key, const crypto::public_key& tx_pub_key, const std::vector<crypto::public_key>& additional_tx_pub_keys, size_t output_index)
+  bool is_out_to_acc(const account_keys& acc, const txout_to_key& out_key, const crypto::derived_public_key& tx_pub_key, const std::vector<crypto::derived_public_key>& additional_tx_pub_keys, size_t output_index)
   {
     crypto::derived_public_key pk{};
     auto r = acc.get_device().derive_master_public_key(acc.m_account_address.m_spend_public_key, pk);
@@ -889,14 +891,16 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool lookup_acc_outs(const account_keys& acc, const transaction& tx, std::vector<size_t>& outs, uint64_t& money_transfered)
   {
-    crypto::public_key tx_pub_key = get_tx_pub_key_from_extra(tx);
-    if(null_pkey == tx_pub_key)
+    auto tx_pub_key = get_tx_pub_key_from_extra(tx);
+    if(null_dPkey == tx_pub_key)
+    {
       return false;
-    std::vector<crypto::public_key> additional_tx_pub_keys = get_additional_tx_pub_keys_from_extra(tx);
+    }
+    auto additional_tx_pub_keys = get_additional_tx_pub_keys_from_extra(tx);
     return lookup_acc_outs(acc, tx, tx_pub_key, additional_tx_pub_keys, outs, money_transfered);
   }
   //---------------------------------------------------------------
-  bool lookup_acc_outs(const account_keys& acc, const transaction& tx, const crypto::public_key& tx_pub_key, const std::vector<crypto::public_key>& additional_tx_pub_keys, std::vector<size_t>& outs, uint64_t& money_transfered)
+  bool lookup_acc_outs(const account_keys& acc, const transaction& tx, const crypto::derived_public_key& tx_pub_key, const std::vector<crypto::derived_public_key>& additional_tx_pub_keys, std::vector<size_t>& outs, uint64_t& money_transfered)
   {
     CHECK_AND_ASSERT_MES(additional_tx_pub_keys.empty() || additional_tx_pub_keys.size() == tx.vout.size(), false, "wrong number of additional pubkeys" );
     money_transfered = 0;

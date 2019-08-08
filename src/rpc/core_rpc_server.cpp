@@ -1325,8 +1325,8 @@ namespace cryptonote
     }
     store_difficulty(wdiff, res.difficulty, res.wide_difficulty, res.difficulty_top64);
     blobdata block_blob = t_serializable_object_to_blob(b);
-    crypto::public_key tx_pub_key = cryptonote::get_tx_pub_key_from_extra(b.miner_tx);
-    if(tx_pub_key == crypto::null_pkey)
+    auto tx_pub_key = cryptonote::get_tx_pub_key_from_extra(b.miner_tx);
+    if(tx_pub_key == crypto::null_dPkey)
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
       error_resp.message = "Internal error: failed to create block template";
@@ -1423,14 +1423,6 @@ namespace cryptonote
     CHECK_CORE_READY();
     
     res.status = CORE_RPC_STATUS_OK;
-
-    // TODO: for Testnet 1.0 we enable generating blocks for testnet to run specific rpc commands.
-    //if(m_core.get_nettype() != FAKECHAIN)
-    //{
-    //  error_resp.code = CORE_RPC_ERROR_CODE_REGTEST_REQUIRED;
-    //  error_resp.message = "Regtest required when generating blocks";
-    //  return false;
-    //}
 
     COMMAND_RPC_GETBLOCKTEMPLATE::request template_req;
     COMMAND_RPC_GETBLOCKTEMPLATE::response template_res;

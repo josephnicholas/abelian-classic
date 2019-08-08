@@ -343,7 +343,7 @@ namespace tools
     struct acc_outs_lookup_error : public refresh_error
     {
       explicit acc_outs_lookup_error(std::string&& loc, const cryptonote::transaction& tx,
-        const crypto::public_key& tx_pub_key, const cryptonote::account_keys& acc_keys)
+        const crypto::derived_public_key& tx_pub_key, const cryptonote::account_keys& acc_keys)
         : refresh_error(std::move(loc), "account outs lookup error")
         , m_tx(tx)
         , m_tx_pub_key(tx_pub_key)
@@ -352,7 +352,7 @@ namespace tools
       }
 
       const cryptonote::transaction& tx() const { return m_tx; }
-      const crypto::public_key& tx_pub_key() const { return m_tx_pub_key; }
+      const crypto::derived_public_key& tx_pub_key() const { return m_tx_pub_key; }
       const cryptonote::account_keys& acc_keys() const { return m_acc_keys; }
 
       std::string to_string() const
@@ -365,7 +365,7 @@ namespace tools
 
     private:
       const cryptonote::transaction m_tx;
-      const crypto::public_key m_tx_pub_key;
+      const crypto::derived_public_key m_tx_pub_key;
       const cryptonote::account_keys m_acc_keys;
     };
     //----------------------------------------------------------------------------------------------------

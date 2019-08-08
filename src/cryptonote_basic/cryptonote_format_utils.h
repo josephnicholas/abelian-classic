@@ -70,29 +70,29 @@ namespace cryptonote
 
   bool parse_tx_extra(const std::vector<uint8_t>& tx_extra, std::vector<tx_extra_field>& tx_extra_fields);
   bool sort_tx_extra(const std::vector<uint8_t>& tx_extra, std::vector<uint8_t> &sorted_tx_extra, bool allow_partial = false);
-  crypto::public_key get_tx_pub_key_from_extra(const std::vector<uint8_t>& tx_extra, size_t pk_index = 0);
-  crypto::public_key get_tx_pub_key_from_extra(const transaction_prefix& tx, size_t pk_index = 0);
-  crypto::public_key get_tx_pub_key_from_extra(const transaction& tx, size_t pk_index = 0);
-  bool add_tx_pub_key_to_extra(transaction& tx, const crypto::public_key& tx_pub_key);
-  bool add_tx_pub_key_to_extra(transaction_prefix& tx, const crypto::public_key& tx_pub_key);
-  bool add_tx_pub_key_to_extra(std::vector<uint8_t>& tx_extra, const crypto::public_key& tx_pub_key);
-  std::vector<crypto::public_key> get_additional_tx_pub_keys_from_extra(const std::vector<uint8_t>& tx_extra);
-  std::vector<crypto::public_key> get_additional_tx_pub_keys_from_extra(const transaction_prefix& tx);
-  bool add_additional_tx_pub_keys_to_extra(std::vector<uint8_t>& tx_extra, const std::vector<crypto::public_key>& additional_pub_keys);
+  crypto::derived_public_key get_tx_pub_key_from_extra(const std::vector<uint8_t>& tx_extra, size_t pk_index = 0);
+  crypto::derived_public_key get_tx_pub_key_from_extra(const transaction_prefix& tx, size_t pk_index = 0);
+  crypto::derived_public_key get_tx_pub_key_from_extra(const transaction& tx, size_t pk_index = 0);
+  bool add_tx_pub_key_to_extra(transaction& tx, const crypto::derived_public_key& tx_pub_key);
+  bool add_tx_pub_key_to_extra(transaction_prefix& tx, const crypto::derived_public_key& tx_pub_key);
+  bool add_tx_pub_key_to_extra(std::vector<uint8_t>& tx_extra, const crypto::derived_public_key& tx_pub_key);
+  std::vector<crypto::derived_public_key> get_additional_tx_pub_keys_from_extra(const std::vector<uint8_t>& tx_extra);
+  std::vector<crypto::derived_public_key> get_additional_tx_pub_keys_from_extra(const transaction_prefix& tx);
+  bool add_additional_tx_pub_keys_to_extra(std::vector<uint8_t>& tx_extra, const std::vector<crypto::derived_public_key>& additional_pub_keys);
   bool add_extra_nonce_to_tx_extra(std::vector<uint8_t>& tx_extra, const blobdata& extra_nonce);
   bool remove_field_from_tx_extra(std::vector<uint8_t>& tx_extra, const std::type_info &type);
   void set_payment_id_to_tx_extra_nonce(blobdata& extra_nonce, const crypto::hash& payment_id);
   void set_encrypted_payment_id_to_tx_extra_nonce(blobdata& extra_nonce, const crypto::hash8& payment_id);
   bool get_payment_id_from_tx_extra_nonce(const blobdata& extra_nonce, crypto::hash& payment_id);
   bool get_encrypted_payment_id_from_tx_extra_nonce(const blobdata& extra_nonce, crypto::hash8& payment_id);
-  bool is_out_to_acc(const account_keys& acc, const txout_to_key& out_key, const crypto::public_key& tx_pub_key, const std::vector<crypto::public_key>& additional_tx_public_keys, size_t output_index);
+  bool is_out_to_acc(const account_keys& acc, const txout_to_key& out_key, const crypto::derived_public_key& tx_pub_key, const std::vector<crypto::derived_public_key>& additional_tx_public_keys, size_t output_index);
   struct subaddress_receive_info
   {
     subaddress_index index;
     crypto::derived_public_key derivation;
   };
   boost::optional<subaddress_receive_info> is_out_to_acc_precomp(const account_keys& acc, const std::unordered_map<crypto::derived_public_key, subaddress_index>& subaddresses, const crypto::derived_public_key& out_key, const crypto::derived_public_key & derivation, const std::vector<crypto::derived_public_key>& additional_derivations, size_t output_index, hw::device &hwdev);
-  bool lookup_acc_outs(const account_keys& acc, const transaction& tx, const crypto::public_key& tx_pub_key, const std::vector<crypto::public_key>& additional_tx_public_keys, std::vector<size_t>& outs, uint64_t& money_transfered);
+  bool lookup_acc_outs(const account_keys& acc, const transaction& tx, const crypto::derived_public_key& tx_pub_key, const std::vector<crypto::derived_public_key>& additional_tx_public_keys, std::vector<size_t>& outs, uint64_t& money_transfered);
   bool lookup_acc_outs(const account_keys& acc, const transaction& tx, std::vector<size_t>& outs, uint64_t& money_transfered);
   bool get_tx_fee(const transaction& tx, uint64_t & fee);
   uint64_t get_tx_fee(const transaction& tx);

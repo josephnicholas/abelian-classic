@@ -280,7 +280,7 @@ private:
 
     struct  tx_scan_info_t
     {
-      cryptonote::keypair in_ephemeral;
+      crypto::derived_public_key in_derived_key;
       crypto::key_image ki;
       rct::key mask;
       uint64_t amount;
@@ -552,7 +552,7 @@ private:
       crypto::random_key rng;
     };
 
-    typedef std::tuple<uint64_t, crypto::public_key, rct::key> get_outs_entry;
+    typedef std::tuple<uint64_t, crypto::derived_public_key, rct::key> get_outs_entry;
 
     struct parsed_block
     {
@@ -565,7 +565,7 @@ private:
 
     struct is_out_data
     {
-      crypto::public_key pkey;
+      crypto::derived_public_key pkey;
       crypto::derived_public_key derivation;
       std::vector<boost::optional<cryptonote::subaddress_receive_info>> received;
     };
@@ -578,16 +578,6 @@ private:
 
       bool empty() const { return tx_extra_fields.empty() && primary.empty() && additional.empty(); }
     };
-
-    /*!
-     * \brief  Generates a wallet or restores one.
-     * \param  wallet_              Name of wallet file
-     * \param  password             Password of wallet file
-     * \param  multisig_data        The multisig restore info and keys
-     * \param  create_address_file  Whether to create an address file
-     */
-    void generate(const std::string& wallet_, const epee::wipeable_string& password,
-      const epee::wipeable_string& multisig_data, bool create_address_file = false);
 
     /*!
      * \brief Generates a wallet or restores one.
@@ -1120,7 +1110,7 @@ private:
     uint64_t import_key_images(const std::string &filename, uint64_t &spent, uint64_t &unspent);
     bool import_key_images(std::vector<crypto::key_image> key_images, size_t offset=0, boost::optional<std::unordered_set<size_t>> selected_transfers=boost::none);
     bool import_key_images(signed_tx_set & signed_tx, size_t offset=0, bool only_selected_transfers=false);
-    crypto::public_key get_tx_pub_key_from_received_outs(const tools::wallet2::transfer_details &td) const;
+    crypto::derived_public_key get_tx_pub_key_from_received_outs(const tools::wallet2::transfer_details &td) const;
 
     void update_pool_state(bool refreshed = false);
     void remove_obsolete_pool_txs(const std::vector<crypto::hash> &tx_hashes);
@@ -1311,10 +1301,10 @@ private:
     void set_spent(size_t idx, uint64_t height);
     void set_unspent(size_t idx);
     void get_outs(std::vector<std::vector<get_outs_entry>> &outs, const std::vector<size_t> &selected_transfers, size_t fake_outputs_count);
-    bool tx_add_fake_output(std::vector<std::vector<tools::wallet2::get_outs_entry>> &outs, uint64_t global_index, const crypto::public_key& tx_public_key, const rct::key& mask, uint64_t real_index, bool unlocked) const;
+    bool tx_add_fake_output(std::vector<std::vector<tools::wallet2::get_outs_entry>> &outs, uint64_t global_index, const crypto::derived_public_key& tx_public_key, const rct::key& mask, uint64_t real_index, bool unlocked) const;
     bool should_pick_a_second_output(bool use_rct, size_t n_transfers, const std::vector<size_t> &unused_transfers_indices, const std::vector<size_t> &unused_dust_indices) const;
     std::vector<size_t> get_only_rct(const std::vector<size_t> &unused_dust_indices, const std::vector<size_t> &unused_transfers_indices) const;
-    void scan_output(const cryptonote::transaction &tx, bool miner_tx, const crypto::public_key &tx_pub_key, size_t i, tx_scan_info_t &tx_scan_info, int &num_vouts_received, std::unordered_map<cryptonote::subaddress_index, uint64_t> &tx_money_got_in_outs, std::vector<size_t> &outs, bool pool);
+    void scan_output(const cryptonote::transaction &tx, bool miner_tx, const crypto::derived_public_key &tx_pub_key, size_t i, tx_scan_info_t &tx_scan_info, int &num_vouts_received, std::unordered_map<cryptonote::subaddress_index, uint64_t> &tx_money_got_in_outs, std::vector<size_t> &outs, bool pool);
     void trim_hashchain();
     bool add_rings(const crypto::chacha_key &key, const cryptonote::transaction_prefix &tx);
     bool add_rings(const cryptonote::transaction_prefix &tx);

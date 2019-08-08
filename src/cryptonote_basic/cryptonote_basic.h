@@ -59,7 +59,7 @@ namespace cryptonote
 
   struct txout_to_script
   {
-    std::vector<crypto::public_key> keys;
+    std::vector<crypto::derived_public_key> keys;
     std::vector<uint8_t> script;
 
     BEGIN_SERIALIZE_OBJECT()

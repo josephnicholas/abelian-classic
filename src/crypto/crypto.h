@@ -138,6 +138,9 @@ namespace crypto {
     friend bool derive_master_public_key(const public_key &,
                                          derived_public_key &);
 
+    static bool check_derived_key_ownersip(const derived_public_key &, const secret_key &, const public_key &);
+    friend bool check_derived_key_ownersip(const derived_public_key &, const secret_key &, const public_key &);
+
     static void derive_secret_key(const derived_public_key &, std::size_t, const secret_key &, secret_key &);
     friend void derive_secret_key(const derived_public_key &, std::size_t, const secret_key &, secret_key &);
     static bool derive_subaddress_public_key(const public_key &, const derived_public_key &, std::size_t, public_key &);
@@ -245,6 +248,10 @@ namespace crypto {
     return crypto_ops::derive_master_public_key(mPK, dPK);
   }
 
+  inline bool check_derived_key_ownersip(const derived_public_key &dPK, const secret_key &mSK, const public_key &mPK) {
+    return crypto_ops::check_derived_key_ownersip(dPK, mSK, mPK);
+  }
+
   inline void derivation_to_scalar(const derived_public_key &derivation, size_t output_index, ec_scalar &res) {
     return crypto_ops::derivation_to_scalar(derivation, output_index, res);
   }
@@ -329,6 +336,7 @@ namespace crypto {
 
   const extern crypto::public_key null_pkey;
   const extern crypto::secret_key null_skey;
+  const extern crypto::derived_public_key null_dPkey;
 }
 
 CRYPTO_MAKE_HASHABLE(public_key)

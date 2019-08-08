@@ -67,6 +67,7 @@ namespace crypto {
 
   const crypto::public_key null_pkey = crypto::public_key{};
   const crypto::secret_key null_skey = crypto::secret_key{};
+  const crypto::derived_public_key null_dPkey = crypto::derived_public_key{};
 
   static inline unsigned char *operator &(ec_point &point) {
     return &reinterpret_cast<unsigned char &>(point);
@@ -220,6 +221,10 @@ namespace crypto {
     derived_public_key_gen((uint8_t *)&mPK, (uint8_t *)&dPK);
 
     return derived_public_key_public_check((uint8_t *)&dPK) == 1;
+  }
+
+  bool crypto_ops::check_derived_key_ownersip(const derived_public_key &dPK, const secret_key &mSK, const public_key &mPK) {
+    return derived_public_key_owner_check((uint8_t *)&dPK, (uint8_t *)&mSK, (uint8_t *)&mPK) == 1;
   }
 
   void crypto_ops::derive_secret_key(const derived_public_key &derivation, size_t output_index,

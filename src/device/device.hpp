@@ -171,7 +171,7 @@ namespace hw {
         virtual bool  sc_secret_add( crypto::secret_key &r, const crypto::secret_key &a, const crypto::secret_key &b) = 0;
         virtual crypto::rand_key   generate_keys(crypto::public_key &pub, crypto::secret_key &sec, const crypto::rand_key & recovery_key = crypto::rand_key(), bool recover = false) = 0;
         virtual bool  generate_key_derivation(const crypto::public_key &pub, const crypto::secret_key &sec, crypto::derived_public_key &derivation) = 0;
-        virtual bool  conceal_derivation(crypto::derived_public_key &derivation, const crypto::public_key &tx_pub_key, const std::vector<crypto::public_key> &additional_tx_pub_keys, const crypto::derived_public_key &main_derivation, const std::vector<crypto::derived_public_key> &additional_derivations) = 0;
+        virtual bool  conceal_derivation(crypto::derived_public_key &derivation, const crypto::derived_public_key &tx_pub_key, const std::vector<crypto::derived_public_key> &additional_tx_pub_keys, const crypto::derived_public_key &main_derivation, const std::vector<crypto::derived_public_key> &additional_derivations) = 0;
         virtual bool  derivation_to_scalar(const crypto::derived_public_key &derivation, const size_t output_index, crypto::ec_scalar &res) = 0;
         virtual bool  derive_secret_key(const crypto::derived_public_key &derivation, const std::size_t output_index, const crypto::secret_key &sec,  crypto::secret_key &derived_sec) = 0;
         virtual bool  derive_public_key(const crypto::derived_public_key &derivation, const std::size_t output_index, const crypto::public_key &pub,  crypto::public_key &derived_pub) = 0;
@@ -202,7 +202,7 @@ namespace hw {
                                        const crypto::public_key &R, const crypto::public_key &A, const boost::optional<crypto::public_key> &B, const crypto::public_key &D, const crypto::secret_key &r, 
                                        crypto::signature &sig) = 0;
 
-        virtual bool  open_tx(crypto::secret_key &tx_key) = 0;
+        virtual bool  open_tx(const crypto::public_key &master_pub_key, crypto::derived_public_key &tx_pub_key) = 0;
 
         virtual bool open_tx(crypto::secret_key &tx_key, crypto::public_key &tx_pub_key) = 0;
 

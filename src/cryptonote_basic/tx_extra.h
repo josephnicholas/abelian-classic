@@ -95,7 +95,7 @@ namespace cryptonote
 
   struct tx_extra_pub_key
   {
-    crypto::public_key pub_key;
+    crypto::derived_public_key pub_key;
 
     BEGIN_SERIALIZE()
       FIELD(pub_key)
@@ -163,7 +163,7 @@ namespace cryptonote
   // per-output additional tx pubkey for multi-destination transfers involving at least one subaddress
   struct tx_extra_additional_pub_keys
   {
-    std::vector<crypto::public_key> data;
+    std::vector<crypto::derived_public_key> data;
 
     BEGIN_SERIALIZE()
       FIELD(data)
