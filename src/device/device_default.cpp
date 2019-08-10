@@ -146,6 +146,7 @@ namespace hw {
             CHECK_AND_ASSERT_THROW_MES(begin <= end, "begin > end");
 
             std::vector<crypto::public_key> pkeys;
+            LOG_PRINT_L0("end: " << end << "begin: " << begin);
             pkeys.reserve(end - begin);
             cryptonote::subaddress_index index = {account, begin};
 

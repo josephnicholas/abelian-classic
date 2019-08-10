@@ -125,14 +125,10 @@ namespace cryptonote
     std::vector<uint64_t> key_offsets;
     crypto::key_image k_image;      // double spending protection TODO
 
-    // Add a RNG field in input.
-    crypto::random_key random;
-
     BEGIN_SERIALIZE_OBJECT()
       VARINT_FIELD(amount)
       FIELD(key_offsets)
       FIELD(k_image)
-      FIELD(random)
     END_SERIALIZE()
   };
 
@@ -450,39 +446,10 @@ namespace cryptonote
     bool operator==(const account_public_address& rhs) const
     {
       return m_spend_public_key == rhs.m_spend_public_key;
-      //&& m_view_public_key == rhs.m_view_public_key;
     }
 
     bool operator!=(const account_public_address& rhs) const
     {
-      return !(*this == rhs);
-    }
-  };
-
-  /**
-   * Proposal on shorter Public addresses - Experimental
-   */
-  struct account_public_short_address
-  {
-    crypto::hash m_spend_public_key_hash;
-    crypto::hash m_view_public_key_hash;
-
-    BEGIN_SERIALIZE_OBJECT()
-      FIELD(m_spend_public_key_hash)
-      FIELD(m_view_public_key_hash)
-    END_SERIALIZE()
-
-    BEGIN_KV_SERIALIZE_MAP()
-      KV_SERIALIZE_VAL_POD_AS_BLOB_FORCE(m_spend_public_key_hash)
-      KV_SERIALIZE_VAL_POD_AS_BLOB_FORCE(m_view_public_key_hash)
-    END_KV_SERIALIZE_MAP()
-
-    bool operator==(const account_public_short_address &rhs) const {
-      return m_spend_public_key_hash == rhs.m_spend_public_key_hash &&
-             m_view_public_key_hash == rhs.m_view_public_key_hash;
-    }
-
-    bool operator!=(const account_public_short_address &rhs) const {
       return !(*this == rhs);
     }
   };

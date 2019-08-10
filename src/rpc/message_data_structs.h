@@ -63,7 +63,7 @@ namespace rpc
   struct output_key_and_amount_index
   {
     uint64_t amount_index;
-    crypto::public_key key;
+    crypto::derived_public_key key;
   };
 
   typedef std::vector<output_key_and_amount_index> outputs_for_amount;

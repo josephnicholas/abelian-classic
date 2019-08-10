@@ -483,11 +483,6 @@ namespace cryptonote
      bool get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_key_image_info>& key_image_infos, bool include_unrelayed_txes = true) const;
 
      /**
-      * Override
-      */
-     bool get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_rng_info>& rng_infos, bool include_unrelayed_txes = true) const;
-
-     /**
       * @copydoc tx_memory_pool::get_pool_for_rpc
       *
       * @note see tx_memory_pool::get_pool_for_rpc
@@ -712,9 +707,6 @@ namespace cryptonote
       */
      bool is_key_image_spent(const crypto::key_image& key_im) const;
 
-     // RNG
-     bool is_rng_spent(const crypto::random_key& rng) const;
-
      /**
       * @brief check if multiple key images are spent
       *
@@ -728,11 +720,6 @@ namespace cryptonote
      bool are_key_images_spent(const std::vector<crypto::key_image>& key_im, std::vector<bool> &spent) const;
 
      /**
-      * RNG handler for are_key_images_spent
-      */
-     bool are_rngs_spent(const std::vector<crypto::random_key>& rng, std::vector<bool> &spent) const;
-
-     /**
       * @brief check if multiple key images are spent in the transaction pool
       *
       * @param key_im list of key images to check
@@ -741,11 +728,6 @@ namespace cryptonote
       * @return true
       */
      bool are_key_images_spent_in_pool(const std::vector<crypto::key_image>& key_im, std::vector<bool> &spent) const;
-
-     /**
-      * RNG implementation of are_key_images_spent_in_pool
-      */
-      bool are_rngs_spent_in_pool(const std::vector<crypto::random_key>& rngs, std::vector<bool> &spent) const;
 
      /**
       * @brief get the number of blocks to sync in one go
@@ -959,11 +941,6 @@ namespace cryptonote
       * @return false if any key image is repeated, otherwise true
       */
      bool check_tx_inputs_keyimages_diff(const transaction& tx) const;
-
-     /**
-      * RNG handler for check_tx_inputs_keyimages_diff
-      */
-     bool check_tx_inputs_rng_diff(const transaction& tx) const;
 
      /**
       * @brief verify that each ring uses distinct members

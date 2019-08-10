@@ -115,14 +115,7 @@ public:
   virtual void add_spent_key(const crypto::key_image& k_image) override {}
   virtual void remove_spent_key(const crypto::key_image& k_image) override {}
 
-  //RNG
-  virtual void add_spent_rng(const crypto::pq_seed& rand) {}
-  virtual void remove_spent_rng(const crypto::pq_seed& rand) {}
-
   virtual bool for_all_key_images(std::function<bool(const crypto::key_image&)>) const override { return true; }
-
-  // RNG
-  virtual bool for_all_rng(std::function<bool(const crypto::pq_seed&)>) const { return false; }
 
   virtual bool for_blocks_range(const uint64_t&, const uint64_t&, std::function<bool(uint64_t, const crypto::hash&, const cryptonote::block&)>) const { return true; }
   virtual bool for_all_transactions(std::function<bool(const crypto::hash&, const cryptonote::transaction&)>, bool pruned) const { return true; }

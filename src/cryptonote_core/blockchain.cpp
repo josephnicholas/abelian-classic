@@ -167,12 +167,6 @@ bool Blockchain::have_tx_keyimg_as_spent(const crypto::key_image &key_im) const
   // lock if it is otherwise needed.
   return  m_db->has_key_image(key_im);
 }
-// RNG
-bool Blockchain::have_tx_rng_as_spent(const crypto::random_key &rng) const
-{
-  LOG_PRINT_L3("Blockchain::" << __func__);
-  return m_db->has_spent_rng(rng);
-}
 //------------------------------------------------------------------
 // This function makes sure that each "input" in an input (mixins) exists
 // and collects the public key for each from the transaction it was included in
@@ -2557,8 +2551,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, uint64_t& max_used_block_heigh
 #endif
 
   TIME_MEASURE_START(a);
-  //Now check input based on RNG field
-  bool res = check_tx_inputs(tx, tvc, &max_used_block_height);
+  auto res = check_tx_inputs(tx, tvc, &max_used_block_height);
   TIME_MEASURE_FINISH(a);
   if(m_show_time_stats)
   {
@@ -2682,19 +2675,6 @@ bool Blockchain::have_tx_keyimges_as_spent(const transaction &tx) const
     CHECKED_GET_SPECIFIC_VARIANT(in, const txin_to_key, in_to_key, true);
     if(have_tx_keyimg_as_spent(in_to_key.k_image))
       return true;
-  }
-  return false;
-}
-//RNG---------------------------------------------------------------
-bool Blockchain::have_tx_rngs_as_spent(const cryptonote::transaction &tx) const
-{
-  LOG_PRINT_L3("Blockchain::" << __func__);
-  for (const auto &in : tx.vin)
-  {
-    CHECKED_GET_SPECIFIC_VARIANT(in, const txin_to_key, in_to_key, true);
-    if(have_tx_rng_as_spent(in_to_key.random)){
-      return true;
-    }
   }
   return false;
 }
@@ -2867,22 +2847,18 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
 
   // from v7, sorted ins
   if (hf_version >= 7) {
-    //const crypto::key_image *last_key_image = NULL;
-    const crypto::random_key *last_rand_key = NULL;
+    const crypto::key_image *last_key_image = NULL;
     for (size_t n = 0; n < tx.vin.size(); ++n)
     {
       const txin_v &txin = tx.vin[n];
-      if (txin.type() == typeid(txin_to_key))
+      const txin_to_key& in_to_key = boost::get<txin_to_key>(txin);
+      if (last_key_image && memcmp(&in_to_key.k_image, last_key_image, sizeof(*last_key_image)) >= 0)
       {
-        const txin_to_key& in_to_key = boost::get<txin_to_key>(txin);
-        if (last_rand_key && memcmp(&in_to_key.random, last_rand_key, sizeof(*last_rand_key)) >= 0) // changed to the random key in input instead of the key_image
-        {
-          MERROR_VER("transaction has unsorted inputs");
-          tvc.m_verifivation_failed = true;
-          return false;
-        }
-        last_rand_key = &in_to_key.random;
+        MERROR_VER("transaction has unsorted inputs");
+        tvc.m_verifivation_failed = true;
+        return false;
       }
+      last_key_image = &in_to_key.k_image;
     }
   }
   auto it = m_check_txin_table.find(tx_prefix_hash);
@@ -2912,11 +2888,9 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
     // TODO: make sure tx output has key offset(s) (is signed to be used)
     CHECK_AND_ASSERT_MES(in_to_key.key_offsets.size(), false, "empty in_to_key.key_offsets in transaction with id " << get_transaction_hash(tx));
 
-    // Instead of checking the spend key image check if RNG field is already spend.
-    //if(have_tx_keyimg_as_spent(in_to_key.k_image))
-    if(have_tx_rng_as_spent(in_to_key.random))
+    if(have_tx_keyimg_as_spent(in_to_key.k_image))
     {
-      MERROR_VER("RNG already spent in blockchain: " << epee::string_tools::pod_to_hex(in_to_key.random));
+      MERROR_VER("Key image already spent in blockchain: " << epee::string_tools::pod_to_hex(in_to_key.k_image));
       tvc.m_double_spend = true;
       return false;
     }
@@ -3868,13 +3842,6 @@ leave:
     {
       LOG_ERROR("Error adding block with hash: " << id << " to blockchain, what = " << e.what());
       m_batch_success = false;
-      bvc.m_verifivation_failed = true;
-      return_tx_to_pool(txs);
-      return false;
-    }
-    catch (const RNG_EXISTS& e)
-    {
-      LOG_ERROR("Error adding block with hash: " << id << " to blockchain, what = " << e.what());
       bvc.m_verifivation_failed = true;
       return_tx_to_pool(txs);
       return false;

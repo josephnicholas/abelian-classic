@@ -159,18 +159,6 @@ DISABLE_VS_WARNINGS(4244 4345)
   {
     auto random = generate_keys(m_keys.m_account_address.m_spend_public_key, m_keys.m_spend_secret_key, recovery_key, recover);
 
-    // Create a hash of the spend_public key
-    //keccak((uint8_t *)&m_keys.m_account_address.m_spend_public_key, sizeof(crypto::public_key), (uint8_t *)&m_keys.m_account_short_address.m_spend_public_key_hash, sizeof(crypto::hash));
-
-    // rng for generating second set of keys is hash of first rng.  means only one set of electrum-style words needed for recovery
-    //crypto::rand_key  second;
-
-    //keccak((uint8_t *)&m_keys.m_spend_secret_key, sizeof(crypto::secret_key), (uint8_t *)&second, sizeof(crypto::rand_key));
-    //generate_keys(m_keys.m_account_address.m_view_public_key, m_keys.m_view_secret_key, second, two_random ? false : true);
-
-    // Create a hash of the view public key
-    //keccak((uint8_t *)&m_keys.m_account_address.m_view_public_key, sizeof(crypto::public_key), (uint8_t *)&m_keys.m_account_short_address.m_view_public_key_hash, sizeof(crypto::hash));
-
     struct tm timestamp = {0};
     timestamp.tm_year = 2014 - 1900;  // year 2014
     timestamp.tm_mon = 6 - 1;  // month june
@@ -261,11 +249,6 @@ DISABLE_VS_WARNINGS(4244 4345)
   std::string account_base::get_public_address_str(network_type nettype) const
   {
     return get_account_address_as_str(nettype, false, m_keys.m_account_address);
-  }
-  //-----------------------------------------------------------------
-  std::string account_base::get_short_public_address_str(network_type nettype) const
-  {
-    return get_short_account_address_as_str(nettype, false, m_keys.m_account_short_address);
   }
   //-----------------------------------------------------------------
   std::string account_base::get_public_integrated_address_str(const crypto::hash8 &payment_id, network_type nettype) const

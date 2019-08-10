@@ -108,12 +108,6 @@ t_command_server::t_command_server(
     , "Print whether a given key image is in the spent key images set."
     );
   m_command_lookup.set_handler(
-            "is_rng_spent"
-            , std::bind(&t_command_parser_executor::is_rng_spent, &m_parser, p::_1)
-            , "is_rng_spent <rng>"
-            , "Print whether a given random key is in the spent random key set."
-    );
-  m_command_lookup.set_handler(
       "start_mining"
     , std::bind(&t_command_parser_executor::start_mining, &m_parser, p::_1)
     , "start_mining <addr> [<threads>|auto] [do_background_mining] [ignore_battery]"

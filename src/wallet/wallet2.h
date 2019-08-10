@@ -318,11 +318,6 @@ private:
       uint64_t amount() const { return m_amount; }
       const crypto::derived_public_key &get_public_key() const { return boost::get<const cryptonote::txout_to_key>(m_tx.vout[m_internal_output_index].target).key; }
 
-      //RNG
-      bool m_rng_key_known;
-      bool m_rng_key_partial;
-      crypto::random_key m_rng_key;
-
       BEGIN_SERIALIZE_OBJECT()
         FIELD(m_block_height)
         FIELD(m_tx)
@@ -344,9 +339,6 @@ private:
         FIELD(m_multisig_k)
         FIELD(m_multisig_info)
         FIELD(m_uses)
-        FIELD(m_rng_key_known)
-        FIELD(m_rng_key_partial)
-        FIELD(m_rng_key)
       END_SERIALIZE()
     };
 
@@ -387,7 +379,7 @@ private:
       uint64_t m_timestamp;
       uint32_t m_subaddr_account;   // subaddress account of your wallet to be used in this transfer
       std::set<uint32_t> m_subaddr_indices;  // set of address indices used as inputs in this transfer
-      std::vector<std::pair<crypto::random_key, std::vector<uint64_t>>> m_rings; // relative - change in RNG
+      std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> m_rings; // relative
     };
 
     struct confirmed_transfer_details
@@ -402,7 +394,7 @@ private:
       uint64_t m_unlock_time;
       uint32_t m_subaddr_account;   // subaddress account of your wallet to be used in this transfer
       std::set<uint32_t> m_subaddr_indices;  // set of address indices used as inputs in this transfer
-      std::vector<std::pair<crypto::random_key, std::vector<uint64_t>>> m_rings; // relative - change in RNG
+      std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> m_rings; // relative
 
       confirmed_transfer_details(): m_amount_in(0), m_amount_out(0), m_change((uint64_t)-1), m_block_height(0), m_payment_id(crypto::null_hash), m_timestamp(0), m_unlock_time(0), m_subaddr_account((uint32_t)-1) {}
       confirmed_transfer_details(const unconfirmed_transfer_details &utd, uint64_t height):
@@ -549,7 +541,6 @@ private:
       crypto::key_image key_image;
       crypto::signature shared_secret_sig;
       crypto::signature key_image_sig;
-      crypto::random_key rng;
     };
 
     typedef std::tuple<uint64_t, crypto::derived_public_key, rct::key> get_outs_entry;
@@ -821,7 +812,6 @@ private:
       a & m_transfers;
       a & m_account_public_address;
       a & m_key_images;
-      a & m_tx_rng; // Add this for serialization
       if(ver < 6)
         return;
       a & m_unconfirmed_txs;
@@ -1205,17 +1195,11 @@ private:
     bool set_ring_database(const std::string &filename);
     const std::string get_ring_database() const { return m_ring_database; }
     bool get_ring(const crypto::key_image &key_image, std::vector<uint64_t> &outs);
-    //bool get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> &outs);
+    bool get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::key_image, std::vector<uint64_t>>> &outs);
     bool set_ring(const crypto::key_image &key_image, const std::vector<uint64_t> &outs, bool relative);
     bool unset_ring(const std::vector<crypto::key_image> &key_images);
     bool unset_ring(const crypto::hash &txid);
     bool find_and_save_rings(bool force = true);
-
-    // Random keys implementation for RingDB
-    bool get_ring(const crypto::random_key &rand_key, std::vector<uint64_t> &outs);
-    bool get_ring(const crypto::chacha_key &key, const crypto::random_key &rand_key, std::vector<uint64_t> &outs);
-    bool get_rings(const crypto::hash &txid, std::vector<std::pair<crypto::random_key, std::vector<uint64_t>>> &outs);
-    bool set_ring(const crypto::random_key &rand_key, const std::vector<uint64_t> &outs, bool relative);
 
     bool blackball_output(const std::pair<uint64_t, uint64_t> &output);
     bool set_blackballed_outputs(const std::vector<std::pair<uint64_t, uint64_t>> &outputs, bool add = false);
@@ -1358,7 +1342,6 @@ private:
     std::unordered_map<crypto::key_image, size_t> m_key_images;
     std::unordered_map<crypto::derived_public_key, size_t> m_pub_keys;
     // Add an additional field for rand ID checking.
-    std::unordered_map<crypto::random_key, size_t> m_tx_rng;
     cryptonote::account_public_address m_account_public_address;
     std::unordered_map<crypto::public_key, cryptonote::subaddress_index> m_subaddresses;
     std::vector<std::vector<std::string>> m_subaddress_labels;
@@ -1511,7 +1494,6 @@ namespace boost
         if (ver < 6)
         {
           x.m_key_image_known = true;
-          x.m_rng_key_known = true;
         }
         if (ver < 7)
         {
@@ -1524,7 +1506,6 @@ namespace boost
         if (ver < 9)
         {
           x.m_key_image_partial = false;
-          x.m_rng_key_partial = false;
           x.m_multisig_k.clear();
           x.m_multisig_info.clear();
         }
@@ -1594,11 +1575,9 @@ namespace boost
         uint8_t u;
         a & u;
         x.m_key_image_known = true;
-        x.m_rng_key_known = true;
         return;
       }
       a & x.m_key_image_known;
-      a & x.m_rng_key_known;
       if (ver < 7)
       {
         initialize_transfer_details(a, x, ver);
@@ -1619,7 +1598,6 @@ namespace boost
       a & x.m_multisig_info;
       a & x.m_multisig_k;
       a & x.m_key_image_partial;
-      a & x.m_rng_key_partial;
       if (ver < 10)
       {
         initialize_transfer_details(a, x, ver);

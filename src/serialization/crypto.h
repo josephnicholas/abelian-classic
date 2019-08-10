@@ -92,6 +92,5 @@ VARIANT_TAG(debug_archive, crypto::public_key, "public_key");
 VARIANT_TAG(debug_archive, crypto::secret_key, "secret_key");
 VARIANT_TAG(debug_archive, crypto::derived_public_key, "derived_public_key");
 VARIANT_TAG(debug_archive, crypto::key_image, "key_image");
-VARIANT_TAG(debug_archive, crypto::random_key, "pq_seed");
 VARIANT_TAG(debug_archive, crypto::signature, "signature");
 

@@ -596,7 +596,7 @@ namespace cryptonote
 
     tx_extra_pub_key pub_key_field{};
     if(!find_tx_extra_field_by_type(tx_extra_fields, pub_key_field, pk_index))
-      return {};
+      return null_dPkey;
 
     return pub_key_field.pub_key;
   }
@@ -846,7 +846,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool is_out_to_acc(const account_keys& acc, const txout_to_key& out_key, const crypto::derived_public_key& tx_pub_key, const std::vector<crypto::derived_public_key>& additional_tx_pub_keys, size_t output_index)
   {
-    crypto::derived_public_key pk{};
+    crypto::derived_public_key pk  = null_dPkey;
     auto r = acc.get_device().derive_master_public_key(acc.m_account_address.m_spend_public_key, pk);
     CHECK_AND_ASSERT_MES(r, false, "Failed to derive public key");
     if (pk == out_key.key)

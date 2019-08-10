@@ -3376,11 +3376,9 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     message_writer(console_color_white, true) << tr("Generated new wallet: ")
                                               << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
     putchar('\n');
-    message_writer(console_color_red, true) << tr("Short address: ")
-                                              << m_wallet->get_account().get_short_public_address_str(m_wallet->nettype());
+
     PAUSE_READLINE();
-    /*std::cout << tr("View key: ");
-    print_secret_key(m_wallet->get_account().get_keys().m_view_secret_key);*/
+
     putchar('\n');
   }
   catch (const std::exception& e)
@@ -3450,10 +3448,6 @@ boost::optional<epee::wipeable_string> simple_wallet::new_wallet(const boost::pr
     }
     message_writer(console_color_white, true) << tr("Generated new wallet: ")
       << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
-
-    putchar('\n');
-    message_writer(console_color_red, true) << tr("Short address: ")
-                                            << m_wallet->get_account().get_short_public_address_str(m_wallet->nettype());
   }
   catch (const std::exception& e)
   {
@@ -3545,9 +3539,7 @@ boost::optional<epee::wipeable_string> simple_wallet::open_wallet(const boost::p
       prefix = tr("Opened wallet");
     message_writer(console_color_white, true) <<
       prefix << ": " << m_wallet->get_account().get_public_address_str(m_wallet->nettype());
-    putchar('\n');
-    message_writer(console_color_red, true) << tr("Short address: ")<< ": "
-                                            << m_wallet->get_account().get_short_public_address_str(m_wallet->nettype());
+
     if (m_wallet->get_account().get_device()) {
        message_writer(console_color_white, true) << "Wallet is on device: " << m_wallet->get_account().get_device().get_name();
     }
@@ -4483,10 +4475,6 @@ bool simple_wallet::rescan_spent(const std::vector<std::string> &args)
     fail_msg_writer() << tr("no connection to daemon. Please make sure daemon is running.");
   }
   catch (const tools::error::is_key_image_spent_error&)
-  {
-    fail_msg_writer() << tr("failed to get spent status");
-  }
-  catch (const tools::error::is_rng_spent_error&)
   {
     fail_msg_writer() << tr("failed to get spent status");
   }

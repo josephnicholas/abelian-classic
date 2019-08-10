@@ -805,14 +805,6 @@ namespace tools
       }
     };
     //----------------------------------------------------------------------------------------------------
-    struct is_rng_spent_error : public wallet_rpc_error
-    {
-      explicit is_rng_spent_error(std::string&& loc, const std::string& request)
-              : wallet_rpc_error(std::move(loc), "error from is_rng_spent call", request)
-      {
-      }
-    };
-    //----------------------------------------------------------------------------------------------------
     struct get_histogram_error : public wallet_rpc_error
     {
       explicit get_histogram_error(std::string&& loc, const std::string& request)

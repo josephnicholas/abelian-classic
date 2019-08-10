@@ -1014,42 +1014,6 @@ bool t_rpc_command_executor::is_key_image_spent(const crypto::key_image &ki) {
   return true;
 }
 
-bool t_rpc_command_executor::is_rng_spent(const crypto::random_key &rng) {
-    cryptonote::COMMAND_RPC_IS_RNG_SPENT::request req;
-    cryptonote::COMMAND_RPC_IS_RNG_SPENT::response res;
-
-    std::string fail_message = "Problem checking rng";
-
-    req.rngs.push_back(epee::string_tools::pod_to_hex(rng));
-    if (m_is_rpc)
-    {
-        if (!m_rpc_client->rpc_request(req, res, "/is_rng_spent", fail_message))
-        {
-            return true;
-        }
-    }
-    else
-    {
-        if (!m_rpc_server->on_is_rng_spent(req, res) || res.status != CORE_RPC_STATUS_OK)
-        {
-            tools::fail_msg_writer() << make_error(fail_message, res.status);
-            return true;
-        }
-    }
-
-    if (1 == res.rng_spent_status.size())
-    {
-        // first as hex
-        tools::success_msg_writer() << &rng << ": " << (res.rng_spent_status.front() ? "spent" : "unspent") << (res.rng_spent_status.front() == cryptonote::COMMAND_RPC_IS_RNG_SPENT::RNG_SPENT_IN_POOL ? " (in pool)" : "");
-    }
-    else
-    {
-        tools::fail_msg_writer() << "rng status could not be determined" << std::endl;
-    }
-
-    return true;
-}
-
 bool t_rpc_command_executor::print_transaction_pool_long() {
   cryptonote::COMMAND_RPC_GET_TRANSACTION_POOL::request req;
   cryptonote::COMMAND_RPC_GET_TRANSACTION_POOL::response res;

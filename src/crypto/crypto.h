@@ -74,7 +74,6 @@ namespace crypto {
   };
 
   using secret_key = epee::mlocked<tools::scrubbed<ec_scalar>>;
-
   using rand_key = epee::mlocked<tools::scrubbed<random_key>>;
 
   POD_CLASS public_keyV {
@@ -339,9 +338,8 @@ namespace crypto {
   const extern crypto::derived_public_key null_dPkey;
 }
 
+CRYPTO_MAKE_HASHABLE(derived_public_key)
 CRYPTO_MAKE_HASHABLE(public_key)
 CRYPTO_MAKE_HASHABLE_CONSTANT_TIME(secret_key)
 CRYPTO_MAKE_HASHABLE(key_image)
-CRYPTO_MAKE_HASHABLE(random_key)
-CRYPTO_MAKE_HASHABLE(derived_public_key)
 CRYPTO_MAKE_COMPARABLE(signature)

@@ -83,10 +83,12 @@ namespace cryptonote
     tx.vin.clear();
     tx.vout.clear();
     tx.extra.clear();
-
-    auto transactionPublicKey = null_dPkey;
-    auto result = crypto::derive_master_public_key(miner_address.m_spend_public_key, transactionPublicKey);
-    add_tx_pub_key_to_extra(tx, transactionPublicKey);
+// Know the block reward + fee.
+// Modify to be not 2 phase generation.
+// Follow maybe in Bitcoin.
+    //auto transactionPublicKey = null_dPkey;
+    //auto result = crypto::derive_master_public_key(miner_address.m_spend_public_key, transactionPublicKey);
+    //add_tx_pub_key_to_extra(tx, transactionPublicKey);
     if(!extra_nonce.empty())
       if(!add_extra_nonce_to_tx_extra(tx.extra, extra_nonce))
         return false;
@@ -404,7 +406,7 @@ namespace cryptonote
     }
      */
     remove_field_from_tx_extra(tx.extra, typeid(tx_extra_pub_key));
-    add_tx_pub_key_to_extra(tx, txkey_pub);
+//    add_tx_pub_key_to_extra(tx, txkey_pub);
 
     std::vector<crypto::derived_public_key> additional_tx_public_keys;
 
@@ -720,7 +722,7 @@ namespace cryptonote
       }
 
       remove_field_from_tx_extra(tx.extra, typeid(tx_extra_pub_key));
-      add_tx_pub_key_to_extra(tx, txkey_pub);
+      //add_tx_pub_key_to_extra(tx, txkey_pub);
 
       std::vector<crypto::derived_public_key> additional_tx_public_keys;
 

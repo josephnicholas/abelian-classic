@@ -1084,10 +1084,7 @@ namespace cryptonote
     }
 
     //check if tx use different key images
-    // TODO: Bypass the key_image checking, instead check for the RNG in input
-    // Or just disregard this check?
-    //if(!check_tx_inputs_keyimages_diff(tx))
-    if(!check_tx_inputs_rng_diff(tx))
+    if(!check_tx_inputs_keyimages_diff(tx))
     {
       MERROR_VER("tx uses a single key image more than once");
       return false;
@@ -1111,21 +1108,6 @@ namespace cryptonote
   bool core::is_key_image_spent(const crypto::key_image &key_image) const
   {
     return m_blockchain_storage.have_tx_keyimg_as_spent(key_image);
-  }
-  //RNG--------------------------------------------------------------------------------------------
-  bool core::is_rng_spent(const crypto::random_key &rng) const
-  {
-    return m_blockchain_storage.have_tx_rng_as_spent(rng);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::are_rngs_spent(const std::vector<crypto::random_key>& rng, std::vector<bool> &spent) const
-  {
-    spent.clear();
-    for(auto& r: rng)
-    {
-      spent.push_back(m_blockchain_storage.have_tx_rng_as_spent(r));
-    }
-    return true;
   }
 //-----------------------------------------------------------------------------------------------
   bool core::are_key_images_spent(const std::vector<crypto::key_image>& key_im, std::vector<bool> &spent) const
@@ -1153,13 +1135,6 @@ namespace cryptonote
     spent.clear();
 
     return m_mempool.check_for_key_images(key_im, spent);
-  }
-  //RNG--------------------------------------------------------------------------------------------
-  bool core::are_rngs_spent_in_pool(const std::vector<crypto::random_key>& rngs, std::vector<bool> &spent) const
-  {
-    spent.clear();
-
-    return m_mempool.check_for_rngs(rngs, spent);
   }
   //-----------------------------------------------------------------------------------------------
   std::pair<uint64_t, uint64_t> core::get_coinbase_tx_sum(const uint64_t start_offset, const size_t count)
@@ -1197,18 +1172,6 @@ namespace cryptonote
     {
       CHECKED_GET_SPECIFIC_VARIANT(in, const txin_to_key, tokey_in, false);
       if(!ki.insert(tokey_in.k_image).second)
-        return false;
-    }
-    return true;
-  }
-  //RNG--------------------------------------------------------------------------------------------
-  bool core::check_tx_inputs_rng_diff(const transaction& tx) const
-  {
-    std::unordered_set<crypto::random_key> rng;
-    for(const auto& in: tx.vin)
-    {
-      CHECKED_GET_SPECIFIC_VARIANT(in, const txin_to_key, tokey_in, false);
-      if(!rng.insert(tokey_in.random).second)
         return false;
     }
     return true;
@@ -1581,11 +1544,6 @@ namespace cryptonote
   bool core::get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_key_image_info>& key_image_infos, bool include_sensitive_data) const
   {
     return m_mempool.get_transactions_and_spent_keys_info(tx_infos, key_image_infos, include_sensitive_data);
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool core::get_pool_transactions_and_spent_keys_info(std::vector<tx_info>& tx_infos, std::vector<spent_rng_info>& rng_infos, bool include_sensitive_data) const
-  {
-      return m_mempool.get_transactions_and_spent_keys_info(tx_infos, rng_infos, include_sensitive_data);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::get_pool_for_rpc(std::vector<cryptonote::rpc::tx_in_pool>& tx_infos, cryptonote::rpc::key_images_with_tx_hashes& key_image_infos) const
