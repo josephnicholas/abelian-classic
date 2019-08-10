@@ -50,21 +50,25 @@
 namespace crypto {
 
   extern "C" {
-  #include "dilithium/ref/api.h"
+  #include "salrs/src/params_salrs.h"
   }
 
 #pragma pack(push, 1)
   POD_CLASS ec_point {
-      char data[CRYPTO_PUBLICKEYBYTES]; // We need to agree on this!
+      char data[SIZE_MPK]; // We need to agree on this!
   };
 
   POD_CLASS ec_scalar {
-      char data[CRYPTO_SECRETKEYBYTES]; // We need to agree on this!
+      char data[SIZE_MSK]; // We need to agree on this!
   };
 
   // Randomness data type
   POD_CLASS pq_seed {
         char data[32U]; // We need to agree on this!
+  };
+
+  POD_CLASS derived_public_key {
+        char data[SIZE_DPK];
   };
 
   POD_CLASS public_key: ec_point {
@@ -100,8 +104,7 @@ namespace crypto {
   };
 
   POD_CLASS signature {
-    //ec_scalar c, r; // TODO: changed to 32 byte rand for creating and checking ring sigs
-    char data[CRYPTO_BYTES + HASH_SIZE]; //32 is prefix hash length
+    char data[4300];
     friend class crypto_ops;
   };
 #pragma pack(pop)
@@ -119,6 +122,13 @@ namespace crypto {
     crypto_ops(const crypto_ops &);
     void operator=(const crypto_ops &);
     ~crypto_ops();
+
+    // SALRS
+    static bool derive_master_public_key(const public_key &, derived_public_key &);
+    friend bool derive_master_public_key(const public_key &, derived_public_key &);
+
+    static bool check_derived_key_ownersip(const derived_public_key &, const secret_key &, const public_key &);
+    friend bool check_derived_key_ownersip(const derived_public_key &, const secret_key &, const public_key &);
 
     static rand_seed generate_keys(public_key &pub, secret_key &sec, const rand_seed& recovery_key = rand_seed(), bool recover = false);
     friend rand_seed generate_keys(public_key &pub, secret_key &sec, const rand_seed& recovery_key, bool recover);
@@ -157,6 +167,16 @@ namespace crypto {
   };
 
   void generate_random_bytes_thread_safe(size_t _N, uint8_t *bytes);
+
+  // SALRS
+  inline bool derive_master_public_key(const public_key &mPK,
+                                       derived_public_key &dPK) {
+    return crypto_ops::derive_master_public_key(mPK, dPK);
+  }
+
+  inline bool check_derived_key_ownersip(const derived_public_key &dPK, const secret_key &mSK, const public_key &mPK) {
+    return crypto_ops::check_derived_key_ownersip(dPK, mSK, mPK);
+  }
 
   /* Generate N random bytes
    */
