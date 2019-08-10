@@ -12,3 +12,7 @@
 [submodule "src/dilithium"]
 	path = src/dilithium
 	url = https://github.com/josephnicholas/dilithium
+[submodule "src/salrs"]
+	path = src/crypto/salrs
+	url = https://github.com/josephnicholas/salrs
+	branch = develop
