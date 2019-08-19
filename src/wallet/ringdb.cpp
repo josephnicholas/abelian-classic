@@ -330,7 +330,7 @@ bool ringdb::add_rings(const crypto::chacha_key &chacha_key, const cryptonote::t
     if (ring_size == 1)
       continue;
 
-    store_relative_ring(txn, dbi_rings, txin.k_image, txin.key_offsets, chacha_key);
+    //store_relative_ring(txn, dbi_rings, txin.k_image, txin.key_offsets, chacha_key);
   }
 
   dbr = mdb_txn_commit(txn);
@@ -442,7 +442,7 @@ bool ringdb::set_ring(const crypto::chacha_key &chacha_key, const crypto::key_im
   epee::misc_utils::auto_scope_leave_caller txn_dtor = epee::misc_utils::create_scope_leave_handler([&](){if (tx_active) mdb_txn_abort(txn);});
   tx_active = true;
 
-  store_relative_ring(txn, dbi_rings, key_image, relative ? outs : cryptonote::absolute_output_offsets_to_relative(outs), chacha_key);
+  //store_relative_ring(txn, dbi_rings, key_image, relative ? outs : cryptonote::absolute_output_offsets_to_relative(outs), chacha_key);
 
   dbr = mdb_txn_commit(txn);
   THROW_WALLET_EXCEPTION_IF(dbr, tools::error::wallet_internal_error, "Failed to commit txn setting ring to database: " + std::string(mdb_strerror(dbr)));

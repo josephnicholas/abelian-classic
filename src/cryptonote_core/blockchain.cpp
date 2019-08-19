@@ -101,6 +101,7 @@ static const struct {
   time_t time;
 } testnet_hard_forks[] = {
   { 1, 1, 0, 1341378000 }, // Version 1 will be used for Testnet alpha and beta releases until SALRS.
+  { 7, 50000, 0, 1583735035 },
 };
 static const uint64_t testnet_hard_fork_version_1_till = 624633;
 
@@ -2772,8 +2773,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
   {
     size_t n_unmixable = 0, n_mixable = 0;
     size_t mixin = std::numeric_limits<size_t>::max();
-    const size_t min_mixin = 0;
-    LOG_PRINT_L2("min_mixin: "<< min_mixin);
+    const size_t min_mixin =  hf_version >= HF_VERSION_MIN_MIXIN_10 ? 10 : hf_version >= HF_VERSION_MIN_MIXIN_6 ? 6 : hf_version >= HF_VERSION_MIN_MIXIN_4 ? 4 : 2;;
     for (const auto& txin : tx.vin)
     {
       // non txin_to_key inputs will be rejected below

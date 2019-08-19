@@ -143,39 +143,57 @@ namespace hw {
         }
 
         std::vector<crypto::public_key>  device_default::get_subaddress_spend_public_keys(const cryptonote::account_keys &keys, uint32_t account, uint32_t begin, uint32_t end) {
-            CHECK_AND_ASSERT_THROW_MES(begin <= end, "begin > end");
+          CHECK_AND_ASSERT_THROW_MES(begin <= end, "begin > end");
 
-            std::vector<crypto::public_key> pkeys;
-            LOG_PRINT_L0("end: " << end << "begin: " << begin);
-            pkeys.reserve(end - begin);
-            cryptonote::subaddress_index index = {account, begin};
+          std::vector<crypto::public_key> pkeys;
+          pkeys.reserve(end - begin);
+          cryptonote::subaddress_index index = {account, begin};
 
-            for (uint32_t idx = begin; idx < end; ++idx)
+          ge_p3 p3;
+          ge_cached cached;
+          //CHECK_AND_ASSERT_THROW_MES(ge_frombytes_vartime(&p3, (const unsigned char*)keys.m_account_address.m_spend_public_key.data) == 0,
+          //   "ge_frombytes_vartime failed to convert spend public key");
+          ge_p3_to_cached(&cached, &p3);
+
+          for (uint32_t idx = begin; idx < end; ++idx)
+          {
+            index.minor = idx;
+            if (index.is_zero())
             {
-                index.minor = idx;
-                if (index.is_zero())
-                {
-                    pkeys.push_back(keys.m_account_address.m_spend_public_key);
-                    continue;
-                }
+              pkeys.push_back(keys.m_account_address.m_spend_public_key);
+              continue;
             }
-            return pkeys;
+            crypto::secret_key m = get_subaddress_secret_key(keys.m_view_secret_key, index);
+
+            // M = m*G
+            ge_scalarmult_base(&p3, (const unsigned char*)m.buffer.data());
+
+            // D = B + M
+            crypto::public_key D;
+            ge_p1p1 p1p1;
+            ge_add(&p1p1, &p3, &cached);
+            ge_p1p1_to_p3(&p3, &p1p1);
+            ge_p3_tobytes((unsigned char*)D.buffer.data(), &p3);
+
+            pkeys.push_back(D);
+          }
+          return pkeys;
         }
 
         cryptonote::account_public_address device_default::get_subaddress(const cryptonote::account_keys& keys, const cryptonote::subaddress_index &index) {
-            if (index.is_zero())
-              return keys.m_account_address;
+          if (index.is_zero())
+            return keys.m_account_address;
 
-            crypto::public_key D = get_subaddress_spend_public_key(keys, index);
+          crypto::public_key D = get_subaddress_spend_public_key(keys, index);
 
-            // C = a*D
-            crypto::public_key C = rct::rct2pk(rct::scalarmultKey(rct::pk2rct(D), rct::sk2rct(keys.m_view_secret_key)));
+          // C = a*D
+          crypto::public_key C = rct::rct2pk(rct::scalarmultKey(rct::pk2rct(D), rct::sk2rct(keys.m_view_secret_key)));
 
-            // result: (C, D)
-            cryptonote::account_public_address address;
-            address.m_spend_public_key  = C;
-            address.m_spend_public_key = D;
-            return address;
+          // result: (C, D)
+          cryptonote::account_public_address address;
+          address.m_spend_public_key  = C;
+          address.m_spend_public_key = D;
+          return address;
         }
 
         crypto::secret_key  device_default::get_subaddress_secret_key(const crypto::secret_key &a, const cryptonote::subaddress_index &index) {

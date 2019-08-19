@@ -55,6 +55,8 @@ namespace cryptonote
   //---------------------------------------------------------------
   void classify_addresses(const std::vector<tx_destination_entry> &destinations, const boost::optional<cryptonote::account_public_address>& change_addr, size_t &num_stdaddresses, size_t &num_subaddresses, account_public_address &single_dest_subaddress)
   {
+    LOG_PRINT_L1("Destinations size: " << destinations.size());
+
     num_stdaddresses = 0;
     num_subaddresses = 0;
     std::unordered_set<cryptonote::account_public_address> unique_dst_addresses;
@@ -86,9 +88,9 @@ namespace cryptonote
 // Know the block reward + fee.
 // Modify to be not 2 phase generation.
 // Follow maybe in Bitcoin.
-    //auto transactionPublicKey = null_dPkey;
-    //auto result = crypto::derive_master_public_key(miner_address.m_spend_public_key, transactionPublicKey);
-    //add_tx_pub_key_to_extra(tx, transactionPublicKey);
+    auto transactionPublicKey = null_dPkey;
+    auto result = crypto::derive_master_public_key(miner_address.m_spend_public_key, transactionPublicKey);
+    add_tx_pub_key_to_extra(tx, transactionPublicKey);
     if(!extra_nonce.empty())
       if(!add_extra_nonce_to_tx_extra(tx.extra, extra_nonce))
         return false;
@@ -104,6 +106,8 @@ namespace cryptonote
       LOG_PRINT_L0("Block is too big");
       return false;
     }
+
+    LOG_PRINT_L1("Block Reward: " << block_reward);
 
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
     LOG_PRINT_L1("Creating block template: reward " << block_reward <<
@@ -152,14 +156,12 @@ namespace cryptonote
     for (size_t no = 0; no < out_amounts.size(); no++)
     {
       crypto::derived_public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
-      //crypto::generate_key_derivation(miner_address.m_view_public_key, txkey.sec, derivation);
-      //CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to generate_key_derivation(" << miner_address.m_view_public_key << " ---- " << txkey.sec << ")");
-
       auto r = crypto::derive_master_public_key(miner_address.m_spend_public_key, out_eph_public_key);
       CHECK_AND_ASSERT_MES(r, false, "while creating outs: failed to derive_public_key(" << out_eph_public_key << " ---- " << no << " ---- "<< miner_address.m_spend_public_key << ")");
 
       txout_to_key tk;
       tk.key = out_eph_public_key;
+
       tx_out out;
       summary_amounts += out.amount = out_amounts[no];
       out.target = tk;
@@ -171,9 +173,14 @@ namespace cryptonote
 
     // Disable RCT impelementation from AEON
     if (hard_fork_version >= HF_VERSION_ALLOW_RCT)
+    {
       tx.version = 2;
+    }
     else
+    {
       tx.version = 1;
+    }
+
 
     //lock
     tx.unlock_time = height + CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW;
@@ -181,8 +188,6 @@ namespace cryptonote
 
     tx.invalidate_hashes();
 
-    //LOG_PRINT("MINER_TX generated ok, block_reward=" << print_money(block_reward) << "("  << print_money(block_reward - fee) << "+" << print_money(fee)
-    //  << "), current_block_size=" << current_block_size << ", already_generated_coins=" << already_generated_coins << ", tx_id=" << get_transaction_hash(tx), LOG_LEVEL_2);
     return true;
   }
   //---------------------------------------------------------------
@@ -546,7 +551,7 @@ namespace cryptonote
       tx.unlock_time = unlock_time;
 
       tx.extra = std::move(extra);
-      auto  txkey_pub = tx_pub_key;
+      auto txkey_pub = tx_pub_key;
 
       // if we have a stealth payment id, find it and encrypt it with the tx key now
       std::vector<tx_extra_field> tx_extra_fields;
@@ -648,34 +653,16 @@ namespace cryptonote
           keypair& in_ephemeral = in_contexts.back().in_ephemeral;
           crypto::key_image img;
 
-          const auto& out_key = reinterpret_cast<const crypto::public_key&>(src_entr.outputs[src_entr.real_output].second);
-          // From Hydrogen Helix, Point Release 4
-          if(!generate_key_image_helper(sender_account_keys, out_key, src_entr.real_output_in_tx_index, in_ephemeral, img))
-          {
-            LOG_ERROR("Key image generation failed!");
-            return false;
-          }
-
-          //check that derivated key is equal with real output key (if non multisig)
-          /*if(!msout && !(in_ephemeral.pub == src_entr.outputs[src_entr.real_output].second) )
-          {
-              LOG_ERROR("derived public key mismatch with output public key at index " << idx << ", real out " << src_entr.real_output << "! "<< ENDL << "derived_key:"
-                                                                                       << string_tools::pod_to_hex(in_ephemeral.pub) << ENDL << "real output_public_key:"
-                                                                                       << string_tools::pod_to_hex(src_entr.outputs[src_entr.real_output].second) );
-              LOG_ERROR("amount " << src_entr.amount << ", rct " << src_entr.rct);
-              LOG_ERROR("tx pubkey " << src_entr.real_out_tx_key << ", real_output_in_tx_index " << src_entr.real_output_in_tx_index);
-              return false;
-          }*/
-
           //put key image into tx input
           txin_to_key input_to_key;
           input_to_key.amount = src_entr.amount;
           input_to_key.k_image = msout ? rct::rct2ki(src_entr.multisig_kLRki.ki) : img;
-//          dilithium_randombytes((unsigned char *)&input_to_key.random, 32U);
 
           //fill outputs array and use relative offsets
           for(const tx_source_entry::output_entry& out_entry: src_entr.outputs)
-              input_to_key.key_offsets.push_back(out_entry.first);
+          {
+            input_to_key.key_offsets.push_back(out_entry.first);
+          }
 
           input_to_key.key_offsets = absolute_output_offsets_to_relative(input_to_key.key_offsets);
           tx.vin.push_back(input_to_key);
@@ -689,12 +676,16 @@ namespace cryptonote
       // sort ins by their key image
       std::vector<size_t> ins_order(sources.size());
       for (size_t n = 0; n < sources.size(); ++n)
-          ins_order[n] = n;
+      {
+        ins_order[n] = n;
+      }
+
       std::sort(ins_order.begin(), ins_order.end(), [&](const size_t i0, const size_t i1) {
           const txin_to_key &tk0 = boost::get<txin_to_key>(tx.vin[i0]);
           const txin_to_key &tk1 = boost::get<txin_to_key>(tx.vin[i1]);
           return memcmp(&tk0.k_image, &tk1.k_image, sizeof(tk0.k_image)) > 0;
       });
+
       tools::apply_permutation(ins_order, [&] (size_t i0, size_t i1) {
           std::swap(tx.vin[i0], tx.vin[i1]);
           std::swap(in_contexts[i0], in_contexts[i1]);
@@ -706,23 +697,6 @@ namespace cryptonote
       size_t num_subaddresses = 0;
       account_public_address single_dest_subaddress{};
       classify_addresses(destinations, change_addr, num_stdaddresses, num_subaddresses, single_dest_subaddress);
-
-      // if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
-      // TODO: Will probably be look on where this heads to
-      if(rct)
-      {
-         LOG_PRINT_L0("Version is RCT");
-         /* TODO if (num_stdaddresses == 0 && num_subaddresses == 1){
-              txkey_pub = rct::rct2pk(hwdev.scalarmultKey(rct::pk2rct(single_dest_subaddress.m_spend_public_key), rct::sk2rct(tx_key)));
-          }
-          else
-          {
-              txkey_pub = rct::rct2pk(hwdev.scalarmultBase(rct::sk2rct(tx_key)));
-          }*/
-      }
-
-      remove_field_from_tx_extra(tx.extra, typeid(tx_extra_pub_key));
-      //add_tx_pub_key_to_extra(tx, txkey_pub);
 
       std::vector<crypto::derived_public_key> additional_tx_public_keys;
 
@@ -739,13 +713,7 @@ namespace cryptonote
       for(const tx_destination_entry& dst_entr: destinations)
       {
           CHECK_AND_ASSERT_MES(dst_entr.amount > 0 || tx.version > 1, false, "Destination with wrong amount: " << dst_entr.amount);
-          crypto::derived_public_key out_eph_public_key;
-
-          //hwdev.generate_output_ephemeral_keys(tx.version,sender_account_keys, txkey_pub, tx_key,
-          //                                     dst_entr, change_addr, output_index,
-          //                                     need_additional_txkeys, additional_tx_keys,
-          //                                     additional_tx_public_keys, amount_keys, out_eph_public_key);
-
+          auto out_eph_public_key = null_dPkey;
 
           hwdev.derive_master_public_key(dst_entr.addr.m_spend_public_key, out_eph_public_key);
 
@@ -763,7 +731,6 @@ namespace cryptonote
 
       remove_field_from_tx_extra(tx.extra, typeid(tx_extra_additional_pub_keys));
 
-      LOG_PRINT_L2("tx pubkey: " << txkey_pub);
       if (need_additional_txkeys)
       {
           LOG_PRINT_L2("additional tx pubkeys: ");
@@ -799,6 +766,8 @@ namespace cryptonote
 
           std::stringstream ss_ring_s;
           size_t i = 0;
+
+          LOG_PRINT_L2("sources_size " << sources.size());
           for(const tx_source_entry& src_entr:  sources)
           {
               ss_ring_s << "pub_keys:" << ENDL;
@@ -809,31 +778,42 @@ namespace cryptonote
                   ss_ring_s << o.second << ENDL;
               }
 
-              tx.signatures.push_back(std::vector<crypto::signature>());
+              tx.signatures.emplace_back(std::vector<crypto::signature>());
               std::vector<crypto::signature>& sigs = tx.signatures.back();
               sigs.resize(src_entr.outputs.size());
 
+              LOG_PRINT_L2("Start signing!!!! ");
               if (!zero_secret_key)
               {
-                  // Dilithium - signature
                   crypto::public_key pub;
                   crypto::secret_key sec;
 
                   std::copy(sender_account_keys.m_account_address.m_spend_public_key.buffer.begin(), sender_account_keys.m_account_address.m_spend_public_key.buffer.end(), pub.buffer.begin());
                   std::copy(sender_account_keys.m_spend_secret_key.buffer.begin(), sender_account_keys.m_spend_secret_key.buffer.end(), sec.buffer.begin());
 
-                  crypto::generate_signature(tx_prefix_hash, pub, sec, *sigs.data());
+                  polyvecl z[keys_ptrs.size() + 5];
+
+                  const auto& out_key = reinterpret_cast<const crypto::derived_public_key&>(src_entr.outputs[src_entr.real_output].second);
+
+                  crypto::generate_ring_signature(tx_prefix_hash, sizeof(tx_prefix_hash), keys_ptrs.data(), keys_ptrs.size(), out_key, pub, sec, *z, sigs.data());
               }
               ss_ring_s << "signatures:" << ENDL;
               std::for_each(sigs.begin(), sigs.end(), [&](const crypto::signature& s){ss_ring_s << s << ENDL;});
-              ss_ring_s << "prefix_hash:" << tx_prefix_hash << ENDL << "in_ephemeral_key: " << in_contexts[i].in_ephemeral.sec << ENDL << "real_output: " << src_entr.real_output << ENDL;
+              ss_ring_s << "prefix_hash:" << tx_prefix_hash
+              << ENDL << "real_out_tx_key: " << src_entr.real_out_tx_key
+              << ENDL << "real_output: " << src_entr.outputs[src_entr.real_output].second
+              << ENDL << "ring_count: " << keys_ptrs.size() << ENDL;
               i++;
+
+            for (auto &key : keys_ptrs)
+            {
+              ss_ring_s << "key_ptrs:" << *key << ENDL;
+            }
           }
 
           MCINFO("construct_tx", "transaction_created: " << get_transaction_hash(tx) << ENDL << obj_to_json_str(tx) << ENDL << ss_ring_s.str());
       }
       tx.invalidate_hashes();
-
       return true;
   }
   //---------------------------------------------------------------
