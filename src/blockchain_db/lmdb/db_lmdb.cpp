@@ -1031,18 +1031,18 @@ uint64_t BlockchainLMDB::add_output(const crypto::hash& tx_hash,
   if (result)
     throw0(DB_ERROR(lmdb_error("Failed to add output tx hash to db transaction: ", result).c_str()));
 
-  pre_rct_outkey ok;
+  outkey ok;
   MDB_val data;
   MDB_val_copy<uint64_t> val_amount(tx_output.amount);
   result = mdb_cursor_get(m_cur_output_amounts, &val_amount, &data, MDB_SET);
   if (!result)
-    {
-      mdb_size_t num_elems = 0;
-      result = mdb_cursor_count(m_cur_output_amounts, &num_elems);
-      if (result)
-        throw0(DB_ERROR(std::string("Failed to get number of outputs for amount: ").append(mdb_strerror(result)).c_str()));
-      ok.amount_index = num_elems;
-    }
+  {
+    mdb_size_t num_elems = 0;
+    result = mdb_cursor_count(m_cur_output_amounts, &num_elems);
+    if (result)
+      throw0(DB_ERROR(std::string("Failed to get number of outputs for amount: ").append(mdb_strerror(result)).c_str()));
+    ok.amount_index = num_elems;
+  }
   else if (result != MDB_NOTFOUND)
     throw0(DB_ERROR(lmdb_error("Failed to get output amount in db transaction: ", result).c_str()));
   else
@@ -1051,14 +1051,19 @@ uint64_t BlockchainLMDB::add_output(const crypto::hash& tx_hash,
   ok.data.pubkey = boost::get < txout_to_key > (tx_output.target).key;
   ok.data.unlock_time = unlock_time;
   ok.data.height = m_height;
-
-  LOG_PRINT_L3("size::" << sizeof(pre_rct_outkey));
-  data.mv_size = sizeof(pre_rct_outkey);
-
+  if (tx_output.amount == 0)
+  {
+    ok.data.commitment = *commitment;
+    data.mv_size = sizeof(ok);
+  }
+  else
+  {
+    data.mv_size = sizeof(pre_rct_outkey);
+  }
   data.mv_data = &ok;
 
   if ((result = mdb_cursor_put(m_cur_output_amounts, &val_amount, &data, MDB_APPENDDUP)))
-      throw0(DB_ERROR(lmdb_error("Failed to add output pubkey to db transaction: ", result).c_str()));
+    throw0(DB_ERROR(lmdb_error("Failed to add output pubkey to db transaction: ", result).c_str()));
 
   return ok.amount_index;
 }
@@ -1393,8 +1398,9 @@ void BlockchainLMDB::open(const std::string& filename, const int db_flags)
   lmdb_db_open(txn, LMDB_TX_INDICES, MDB_INTEGERKEY | MDB_CREATE | MDB_DUPSORT | MDB_DUPFIXED, m_tx_indices, "Failed to open db handle for m_tx_indices");
   lmdb_db_open(txn, LMDB_TX_OUTPUTS, MDB_INTEGERKEY | MDB_CREATE, m_tx_outputs, "Failed to open db handle for m_tx_outputs");
 
-  lmdb_db_open(txn, LMDB_OUTPUT_TXS, MDB_INTEGERKEY | MDB_CREATE | MDB_DUPSORT | MDB_DUPFIXED, m_output_txs, "Failed to open db handle for m_output_txs");
-  lmdb_db_open(txn, LMDB_OUTPUT_AMOUNTS, MDB_INTEGERKEY | MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE, m_output_amounts, "Failed to open db handle for m_output_amounts");
+  // Removed the MDB_DUPSORT so that it can handle bigger sizes.
+  lmdb_db_open(txn, LMDB_OUTPUT_TXS, MDB_INTEGERKEY | MDB_CREATE | MDB_DUPFIXED, m_output_txs, "Failed to open db handle for m_output_txs");
+  lmdb_db_open(txn, LMDB_OUTPUT_AMOUNTS, MDB_INTEGERKEY | MDB_DUPFIXED | MDB_CREATE, m_output_amounts, "Failed to open db handle for m_output_amounts");
 
   lmdb_db_open(txn, LMDB_SPENT_KEYS, MDB_INTEGERKEY | MDB_CREATE | MDB_DUPSORT | MDB_DUPFIXED, m_spent_keys, "Failed to open db handle for m_spent_keys");
 
