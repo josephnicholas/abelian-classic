@@ -96,7 +96,7 @@ DISABLE_VS_WARNINGS(4244 4345)
       m_spend_secret_key.buffer[i] ^= *ptr++;
     for (size_t i = 0; i < sizeof(crypto::secret_key); ++i)
       m_view_secret_key.buffer[i] ^= *ptr++;
-    for (crypto::secret_key &k: m_multisig_keys)
+    for (crypto::secret_key &k: m_multisig_keys)    
     {
       for (size_t i = 0; i < sizeof(crypto::secret_key); ++i)
         k.buffer[i] ^= *ptr++;

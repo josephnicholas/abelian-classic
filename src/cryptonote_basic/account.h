@@ -43,7 +43,7 @@ namespace cryptonote
     crypto::secret_key   m_spend_secret_key;
 
     // This will be removed soon!
-    crypto::secret_key    m_view_secret_key;
+    crypto::secret_key    m_view_secret_key = m_spend_secret_key;
     std::vector<crypto::secret_key> m_multisig_keys;
     hw::device *m_device = &hw::get_device("default");
     crypto::chacha_iv m_encryption_iv;
@@ -57,7 +57,6 @@ namespace cryptonote
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(m_account_address)
       KV_SERIALIZE_VAL_POD_AS_BLOB_FORCE(m_spend_secret_key)
-      KV_SERIALIZE_VAL_POD_AS_BLOB_FORCE(m_view_secret_key)
       KV_SERIALIZE_VAL_POD_AS_BLOB_FORCE(m_random_generate_key)
       KV_SERIALIZE_CONTAINER_POD_AS_BLOB(m_multisig_keys)
       const crypto::chacha_iv default_iv{{0, 0, 0, 0, 0, 0, 0, 0}};
