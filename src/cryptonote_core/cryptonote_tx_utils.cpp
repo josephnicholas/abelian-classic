@@ -785,6 +785,7 @@ namespace cryptonote
               {
                   crypto::public_key pub;
                   crypto::secret_key sec;
+                  crypto::key_image I;
 
                   std::copy(sender_account_keys.m_account_address.m_spend_public_key.buffer.begin(), sender_account_keys.m_account_address.m_spend_public_key.buffer.end(), pub.buffer.begin());
                   std::copy(sender_account_keys.m_spend_secret_key.buffer.begin(), sender_account_keys.m_spend_secret_key.buffer.end(), sec.buffer.begin());
@@ -792,6 +793,13 @@ namespace cryptonote
                   const auto& out_key = reinterpret_cast<const crypto::derived_public_key&>(src_entr.outputs[src_entr.real_output].second);
 
                   crypto::generate_ring_signature(tx_prefix_hash, keys_ptrs, out_key, pub, sec, sigs.data());
+
+                  // Add key image I
+                  if(tx.vin[i].type() == typeid(txin_to_key))
+                  {
+                    auto &tx_in_to_key = boost::get<txin_to_key>(tx.vin[i]);
+                    tx_in_to_key.k_image = I;
+                  }
               }
               ss_ring_s << "signatures:" << ENDL;
               std::for_each(sigs.begin(), sigs.end(), [&](const crypto::signature& s){ss_ring_s << s << ENDL;});
