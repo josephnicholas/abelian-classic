@@ -562,7 +562,8 @@ POP_WARNINGS
     unsigned char (*Ring)[SIZE_DPK];
     memcpy(&Ring, derived_pubs, sizeof((uint8_t *)&derived_pubs));
 
-    auto result = sign_salrs((uint8_t *)&prefix_hash, hash_len, Ring, pubs_count, (uint8_t *)&dpk, (uint8_t *)&mpk, (uint8_t *)&msk, (uint8_t *)&sigs);
+    auto result = sign_salrs((uint8_t *)&prefix_hash, hash_len, Ring, pubs_count, (uint8_t *)&dpk, (uint8_t *)&mpk, (uint8_t *)&msk, static_cast<polyvecl *>(&z),
+                             reinterpret_cast<uint8_t  *>(&sigs));
     LOG_PRINT_L0("Signature result: "<<result);
   }
 

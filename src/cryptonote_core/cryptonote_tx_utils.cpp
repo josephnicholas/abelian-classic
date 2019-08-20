@@ -791,11 +791,11 @@ namespace cryptonote
                   std::copy(sender_account_keys.m_account_address.m_spend_public_key.buffer.begin(), sender_account_keys.m_account_address.m_spend_public_key.buffer.end(), pub.buffer.begin());
                   std::copy(sender_account_keys.m_spend_secret_key.buffer.begin(), sender_account_keys.m_spend_secret_key.buffer.end(), sec.buffer.begin());
 
-                  polyvecl z[keys_ptrs.size() + 5];
+                  polyvecl z;
 
                   const auto& out_key = reinterpret_cast<const crypto::derived_public_key&>(src_entr.outputs[src_entr.real_output].second);
 
-                  crypto::generate_ring_signature(tx_prefix_hash, sizeof(tx_prefix_hash), keys_ptrs.data(), keys_ptrs.size(), out_key, pub, sec, *z, sigs.data());
+                  crypto::generate_ring_signature(tx_prefix_hash, sizeof(tx_prefix_hash), keys_ptrs.data(), keys_ptrs.size(), out_key, pub, sec, z, sigs.data());
               }
               ss_ring_s << "signatures:" << ENDL;
               std::for_each(sigs.begin(), sigs.end(), [&](const crypto::signature& s){ss_ring_s << s << ENDL;});

@@ -98,7 +98,7 @@ namespace crypto {
   };
 
   POD_CLASS signature {
-    std::array<char, 4300> buffer;
+    std::array<char, 1000000> buffer;
     friend class crypto_ops;
   };
 #pragma pack(pop)
