@@ -790,7 +790,7 @@ namespace cryptonote
 
                   const auto& out_key = reinterpret_cast<const crypto::derived_public_key&>(src_entr.outputs[src_entr.real_output].second);
 
-                  crypto::generate_ring_signature(tx_prefix_hash, keys_ptrs, out_key, pub, sec, sigs.data());
+                  crypto::generate_ring_signature(tx_prefix_hash, keys_ptrs, out_key, pub, sec, I, sigs.data());
 
                   // Add key image I
                   if(tx.vin[i].type() == typeid(txin_to_key))

@@ -532,7 +532,7 @@ namespace crypto {
 #else
     // The key image on these experimental change is just the same as the 'pub' parameter.
     // In future releases this will be fixed.
-    image.buffer = pub.buffer;
+    //image.buffer = pub.buffer;
 #endif
   }
 
@@ -551,25 +551,26 @@ POP_WARNINGS
     return sizeof(rs_comm) + pubs_count * sizeof(ec_point_pair);
   }
 
-  void crypto_ops::generate_ring_signature(const hash &prefix_hash, const std::size_t &hash_len, const derived_public_key *const *derived_pubs, std::size_t pubs_count,
-      const derived_public_key &dpk, const public_key &mpk,
-      const secret_key &msk, polyvecl &z, signature *sigs)
+  void crypto_ops::generate_ring_signature(const hash &prefix_hash, const std::size_t &hash_len,
+          const derived_public_key *const *derived_pubs, std::size_t pubs_count,
+          const derived_public_key &dpk, const public_key &mpk,
+          const secret_key &msk, key_image &img, polyvecl &z, signature *sigs)
   {
     LOG_PRINT_L1("crypto_ops" << __func__);
 
     LOG_PRINT_L1("ring size: " << pubs_count << " transaction size: " << hash_len << " transaction hash: " << prefix_hash);
 
     unsigned char (*Ring)[SIZE_DPK];
-    memcpy(&Ring, derived_pubs, sizeof(derived_pubs));
+    memcpy(&Ring, derived_pubs, sizeof((uint8_t *)derived_pubs));
 
     std::array<char, 4712> signatures{};
-    key_image I;
+    std::array<char, 1152> I{};
 
     auto result = sign_salrs((uint8_t *)&prefix_hash, hash_len, Ring, pubs_count, (uint8_t *)&dpk, (uint8_t *)&mpk, (uint8_t *)&msk, (uint8_t *)&I, static_cast<polyvecl *>(&z), (uint8_t *)&signatures);
     LOG_PRINT_L1("Signature result: "<<result);
 
-    LOG_PRINT_L0("signature size: "<< signatures.size());
     std::copy(signatures.begin(), signatures.end(), sigs->buffer.begin());
+    std::copy(I.begin(), I.end(), img.buffer.begin());
   }
 
   bool crypto_ops::check_ring_signature(const hash &prefix_hash, const key_image &image,

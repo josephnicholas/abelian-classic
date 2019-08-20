@@ -82,7 +82,8 @@ namespace crypto {
     int rows;
   };
 
-  POD_CLASS key_image: ec_point {
+  POD_CLASS key_image {
+    std::array<char, 1152> buffer;
     friend class crypto_ops;
   };
 
@@ -147,9 +148,9 @@ namespace crypto {
 
     // Changing for SALRS use
     static void generate_ring_signature(const hash &, const std::size_t &, const derived_public_key *const *, std::size_t,
-                                        const derived_public_key &, const public_key &, const secret_key &, polyvecl &, signature *);
+                                        const derived_public_key &, const public_key &, const secret_key &, key_image &, polyvecl &, signature *);
     friend void generate_ring_signature(const hash &, const std::size_t &, const derived_public_key *const *, std::size_t,
-                                        const derived_public_key &, const public_key &, const secret_key &, polyvecl &, signature *);
+                                        const derived_public_key &, const public_key &, const secret_key &, key_image &img, polyvecl &, signature *);
 
     static bool check_ring_signature(const hash &, const key_image &,
       const public_key *const *, std::size_t, const signature *);
@@ -285,9 +286,9 @@ namespace crypto {
     crypto_ops::generate_key_image(pub, sec, image);
   }
   inline void generate_ring_signature(const hash &prefix_hash, const std::size_t &hash_len, const derived_public_key *const *derived_pubs, std::size_t pubs_count,
-      const derived_public_key &dpk, const public_key &mpk, const secret_key &msk, polyvecl &z, signature *sigs)
+      const derived_public_key &dpk, const public_key &mpk, const secret_key &msk, key_image &img, polyvecl &z, signature *sigs)
   {
-    crypto_ops::generate_ring_signature(prefix_hash, hash_len, derived_pubs, pubs_count, dpk, mpk, msk, z, sigs);
+    crypto_ops::generate_ring_signature(prefix_hash, hash_len, derived_pubs, pubs_count, dpk, mpk, msk, img, z, sigs);
   }
 
   inline bool check_ring_signature(const hash &prefix_hash, const key_image &image,
@@ -299,11 +300,10 @@ namespace crypto {
   /* Variants with vector<const public_key *> parameters.
    */
   inline void generate_ring_signature(const hash &prefix_hash, const std::vector<const derived_public_key *> &derived_pubs,
-                                      const derived_public_key &dpk, const public_key &mpk, const secret_key &msk, signature *sigs)
+                                      const derived_public_key &dpk, const public_key &mpk, const secret_key &msk, key_image &img, signature *sigs)
   {
     polyvecl z;
-
-    generate_ring_signature(prefix_hash, sizeof(prefix_hash), derived_pubs.data(), derived_pubs.size(), dpk, mpk, msk, z, sigs);
+    generate_ring_signature(prefix_hash, sizeof(prefix_hash), derived_pubs.data(), derived_pubs.size(), dpk, mpk, msk, img, z, sigs);
   }
 
   inline bool check_ring_signature(const hash &prefix_hash, const key_image &image,
