@@ -557,14 +557,18 @@ POP_WARNINGS
   {
     LOG_PRINT_L1("crypto_ops" << __func__);
 
-    LOG_PRINT_L1("message size: " << hash_len << " transaction hash: " << prefix_hash);
+    LOG_PRINT_L1("ring size: " << pubs_count << " transaction size: " << hash_len << " transaction hash: " << prefix_hash);
 
     unsigned char (*Ring)[SIZE_DPK];
-    memcpy(&Ring, derived_pubs, sizeof((uint8_t *)&derived_pubs));
+    memcpy(&Ring, derived_pubs, sizeof(derived_pubs));
 
-    auto result = sign_salrs((uint8_t *)&prefix_hash, hash_len, Ring, pubs_count, (uint8_t *)&dpk, (uint8_t *)&mpk, (uint8_t *)&msk, static_cast<polyvecl *>(&z),
-                             reinterpret_cast<uint8_t  *>(&sigs));
-    LOG_PRINT_L0("Signature result: "<<result);
+    std::array<char, 4712> signatures{};
+
+    auto result = sign_salrs((uint8_t *)&prefix_hash, hash_len, Ring, pubs_count, (uint8_t *)&dpk, (uint8_t *)&mpk, (uint8_t *)&msk, static_cast<polyvecl *>(&z), (uint8_t *)&signatures);
+    LOG_PRINT_L1("Signature result: "<<result);
+
+    LOG_PRINT_L0("signature size: "<< signatures.size());
+    std::copy(signatures.begin(), signatures.end(), sigs->buffer.begin());
   }
 
   bool crypto_ops::check_ring_signature(const hash &prefix_hash, const key_image &image,

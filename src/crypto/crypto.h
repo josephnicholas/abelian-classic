@@ -77,20 +77,9 @@ namespace crypto {
   using secret_key = epee::mlocked<tools::scrubbed<ec_scalar>>;
   using rand_key = epee::mlocked<tools::scrubbed<random_key>>;
 
-  POD_CLASS public_keyV {
-    std::vector<public_key> keys;
-    int rows;
-  };
-
   POD_CLASS secret_keyV {
     std::vector<secret_key> keys;
     int rows;
-  };
-
-  POD_CLASS public_keyM {
-    int cols;
-    int rows;
-    std::vector<secret_keyV> column_vectors;
   };
 
   POD_CLASS key_image: ec_point {
@@ -98,7 +87,7 @@ namespace crypto {
   };
 
   POD_CLASS signature {
-    std::array<char, 1000000> buffer;
+    std::array<char, 4712> buffer;
     friend class crypto_ops;
   };
 #pragma pack(pop)
@@ -309,10 +298,14 @@ namespace crypto {
 
   /* Variants with vector<const public_key *> parameters.
    */
-  inline void generate_ring_signature(const hash &prefix_hash, const std::size_t &hash_len, const std::vector<derived_public_key *> &derived_pubs, std::size_t pubs_count,
-                                      const derived_public_key &dpk, const public_key &mpk, const secret_key &msk, polyvecl &z, signature *sigs) {
-    generate_ring_signature(prefix_hash, hash_len, derived_pubs.data(), derived_pubs.size(), dpk, mpk, msk, z, sigs);
+  inline void generate_ring_signature(const hash &prefix_hash, const std::vector<const derived_public_key *> &derived_pubs,
+                                      const derived_public_key &dpk, const public_key &mpk, const secret_key &msk, signature *sigs)
+  {
+    polyvecl z;
+
+    generate_ring_signature(prefix_hash, sizeof(prefix_hash), derived_pubs.data(), derived_pubs.size(), dpk, mpk, msk, z, sigs);
   }
+
   inline bool check_ring_signature(const hash &prefix_hash, const key_image &image,
     const std::vector<const public_key *> &pubs,
     const signature *sig) {

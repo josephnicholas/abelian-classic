@@ -648,7 +648,6 @@ namespace cryptonote
           }
           summary_inputs_money += src_entr.amount;
 
-          //key_derivation recv_derivation;
           in_contexts.push_back(input_generation_context_data());
           keypair& in_ephemeral = in_contexts.back().in_ephemeral;
           crypto::key_image img;
@@ -656,7 +655,7 @@ namespace cryptonote
           //put key image into tx input
           txin_to_key input_to_key;
           input_to_key.amount = src_entr.amount;
-          input_to_key.k_image = msout ? rct::rct2ki(src_entr.multisig_kLRki.ki) : img;
+          input_to_key.k_image = img;
 
           //fill outputs array and use relative offsets
           for(const tx_source_entry::output_entry& out_entry: src_entr.outputs)
@@ -665,7 +664,7 @@ namespace cryptonote
           }
 
           input_to_key.key_offsets = absolute_output_offsets_to_relative(input_to_key.key_offsets);
-          tx.vin.push_back(input_to_key);
+          tx.vin.emplace_back(input_to_key);
       }
 
       if (shuffle_outs)
@@ -767,7 +766,6 @@ namespace cryptonote
           std::stringstream ss_ring_s;
           size_t i = 0;
 
-          LOG_PRINT_L2("sources_size " << sources.size());
           for(const tx_source_entry& src_entr:  sources)
           {
               ss_ring_s << "pub_keys:" << ENDL;
@@ -791,24 +789,17 @@ namespace cryptonote
                   std::copy(sender_account_keys.m_account_address.m_spend_public_key.buffer.begin(), sender_account_keys.m_account_address.m_spend_public_key.buffer.end(), pub.buffer.begin());
                   std::copy(sender_account_keys.m_spend_secret_key.buffer.begin(), sender_account_keys.m_spend_secret_key.buffer.end(), sec.buffer.begin());
 
-                  polyvecl z;
-
                   const auto& out_key = reinterpret_cast<const crypto::derived_public_key&>(src_entr.outputs[src_entr.real_output].second);
 
-                  crypto::generate_ring_signature(tx_prefix_hash, sizeof(tx_prefix_hash), keys_ptrs.data(), keys_ptrs.size(), out_key, pub, sec, z, sigs.data());
+                  crypto::generate_ring_signature(tx_prefix_hash, keys_ptrs, out_key, pub, sec, sigs.data());
               }
               ss_ring_s << "signatures:" << ENDL;
               std::for_each(sigs.begin(), sigs.end(), [&](const crypto::signature& s){ss_ring_s << s << ENDL;});
               ss_ring_s << "prefix_hash:" << tx_prefix_hash
-              << ENDL << "real_out_tx_key: " << src_entr.real_out_tx_key
-              << ENDL << "real_output: " << src_entr.outputs[src_entr.real_output].second
-              << ENDL << "ring_count: " << keys_ptrs.size() << ENDL;
+              << ENDL   << "real_out_tx_key: " << src_entr.real_out_tx_key
+              << ENDL   << "real_output: " << src_entr.outputs[src_entr.real_output].second
+              << ENDL   << "ring_count: " << keys_ptrs.size() << ENDL;
               i++;
-
-            for (auto &key : keys_ptrs)
-            {
-              ss_ring_s << "key_ptrs:" << *key << ENDL;
-            }
           }
 
           MCINFO("construct_tx", "transaction_created: " << get_transaction_hash(tx) << ENDL << obj_to_json_str(tx) << ENDL << ss_ring_s.str());
