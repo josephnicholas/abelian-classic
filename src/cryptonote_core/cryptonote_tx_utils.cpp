@@ -650,12 +650,10 @@ namespace cryptonote
 
           in_contexts.push_back(input_generation_context_data());
           keypair& in_ephemeral = in_contexts.back().in_ephemeral;
-          crypto::key_image img;
 
           //put key image into tx input
           txin_to_key input_to_key;
           input_to_key.amount = src_entr.amount;
-          input_to_key.k_image = img;
 
           //fill outputs array and use relative offsets
           for(const tx_source_entry::output_entry& out_entry: src_entr.outputs)

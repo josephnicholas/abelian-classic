@@ -563,8 +563,9 @@ POP_WARNINGS
     memcpy(&Ring, derived_pubs, sizeof(derived_pubs));
 
     std::array<char, 4712> signatures{};
+    key_image I;
 
-    auto result = sign_salrs((uint8_t *)&prefix_hash, hash_len, Ring, pubs_count, (uint8_t *)&dpk, (uint8_t *)&mpk, (uint8_t *)&msk, static_cast<polyvecl *>(&z), (uint8_t *)&signatures);
+    auto result = sign_salrs((uint8_t *)&prefix_hash, hash_len, Ring, pubs_count, (uint8_t *)&dpk, (uint8_t *)&mpk, (uint8_t *)&msk, (uint8_t *)&I, static_cast<polyvecl *>(&z), (uint8_t *)&signatures);
     LOG_PRINT_L1("Signature result: "<<result);
 
     LOG_PRINT_L0("signature size: "<< signatures.size());
