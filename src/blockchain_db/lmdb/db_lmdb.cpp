@@ -1059,6 +1059,7 @@ uint64_t BlockchainLMDB::add_output(const crypto::hash& tx_hash,
   else
   {
     data.mv_size = sizeof(pre_rct_outkey);
+    LOG_PRINT_L3("BlockchainLMDB::" << __func__ << "data size: " << data.mv_size);
   }
   data.mv_data = &ok;
 
@@ -1217,15 +1218,13 @@ void BlockchainLMDB::add_spent_key(const crypto::key_image& k_image)
 
   MDB_val k = {sizeof(k_image), (void *)&k_image};
   auto result = mdb_cursor_put(m_cur_spent_keys, (MDB_val *)&zerokval, &k, MDB_NODUPDATA);
-  
-  // TODO: For now log the result of same key inside the db.
-  LOG_PRINT_L3("::add_spent_key in DB" << result);
-  /*if (auto result = mdb_cursor_put(m_cur_spent_keys, (MDB_val *)&zerokval, &k, MDB_NODUPDATA)) {
+
+  if (result) {
     if (result == MDB_KEYEXIST)
       throw1(KEY_IMAGE_EXISTS("Attempting to add spent key image that's already in the db"));
     else
       throw1(DB_ERROR(lmdb_error("Error adding spent key image to db transaction: ", result).c_str()));
-  }*/
+  }
 }
 
 void BlockchainLMDB::remove_spent_key(const crypto::key_image& k_image)
@@ -1400,7 +1399,7 @@ void BlockchainLMDB::open(const std::string& filename, const int db_flags)
 
   // Removed the MDB_DUPSORT so that it can handle bigger sizes.
   lmdb_db_open(txn, LMDB_OUTPUT_TXS, MDB_INTEGERKEY | MDB_CREATE | MDB_DUPSORT | MDB_DUPFIXED, m_output_txs, "Failed to open db handle for m_output_txs");
-  lmdb_db_open(txn, LMDB_OUTPUT_AMOUNTS, MDB_INTEGERKEY | MDB_DUPFIXED | MDB_CREATE, m_output_amounts, "Failed to open db handle for m_output_amounts");
+  lmdb_db_open(txn, LMDB_OUTPUT_AMOUNTS, MDB_INTEGERKEY | MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE, m_output_amounts, "Failed to open db handle for m_output_amounts");
 
   lmdb_db_open(txn, LMDB_SPENT_KEYS, MDB_INTEGERKEY | MDB_CREATE | MDB_DUPSORT | MDB_DUPFIXED, m_spent_keys, "Failed to open db handle for m_spent_keys");
 
