@@ -144,8 +144,8 @@ const unsigned int DB_BUFFER_LENGTH = 32 * MB;
 // 256MB cache adjust as necessary using DB_CONFIG
 const unsigned int DB_DEF_CACHESIZE = 256 * MB;
 
-const char zerokey[8] = {0};
-const void* zeroKval = {(void *)zerokey};
+const char *zerokey = {0};
+Dbt zeroKeyVal(&zerokey, sizeof(char));
 
 #if defined(BDB_BULK_CAN_THREAD)
 const unsigned int DB_BUFFER_COUNT = tools::get_max_concurrency();
@@ -263,7 +263,8 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t lo
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
 
-    Dbt_copy<crypto::hash> val_h(blk_hash);
+    blk_height bHeight = {blk_hash, m_height};
+    Dbt_copy<blk_height> val_h(bHeight);
     if (m_block_heights->exists(DB_DEFAULT_TX, &val_h, 0) == 0)
         throw1(BLOCK_EXISTS("Attempting to add block that's already in the db"));
 
@@ -271,13 +272,13 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t lo
     {
         Dbt_copy<crypto::hash> parent_key(blk.prev_id);
         Dbt_copy<uint32_t> parent_h;
-        if (m_block_heights->get(DB_DEFAULT_TX, &parent_key, &parent_h, 0))
+        if (m_block_heights->get(DB_DEFAULT_TX, &zeroKeyVal, &parent_h, DB_GET_BOTH))
         {
             LOG_PRINT_L3("m_height: " << m_height);
             LOG_PRINT_L3("parent_key: " << blk.prev_id);
             throw0(DB_ERROR("Failed to get top block hash to check for new block's parent"));
         }
-        uint32_t parent_height = parent_h;
+        auto parent_height = parent_h;
         if (parent_height != m_height)
         {
           throw0(BLOCK_PARENT_DNE("Top block is not new block's parent"));
@@ -286,10 +287,9 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t lo
 
     auto result = 0;
 
-    Dbt_copy<uint32_t> key(m_height + 1);
-
+    Dbt_copy<uint64_t> key(m_height);
     Dbt_copy<blobdata> blob(block_to_blob(blk));
-    auto res = m_blocks->put(DB_DEFAULT_TX, &key, &blob, 0);
+    auto res = m_blocks->put(DB_DEFAULT_TX, &key, &blob, DB_APPEND);
     if (res) {
       throw0(DB_ERROR("Failed to add block blob to db transaction."));
     }
@@ -308,13 +308,13 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t lo
     {
       uint64_t lastHeight = m_height - 1;
       Dbt_copy<uint32_t> lHeight(lastHeight);
-      result = m_block_info->get(DB_DEFAULT_TX, &key, &lHeight, DB_GET_BOTH);
+      result = m_block_info->get(DB_DEFAULT_TX, &zeroKeyVal, &lHeight, DB_GET_BOTH);
 
       if(result)
       {
         throw1(BLOCK_DNE("Failed to get block info: "));
       }
-      const bdb_block_info *bInfoPrev = (const bdb_block_info*)&lHeight;
+      const bdb_block_info *bInfoPrev = (const bdb_block_info*)lHeight.get_data();
       bInfo.bi_cum_rct += bInfoPrev->bi_cum_rct;
 
     }
@@ -322,7 +322,7 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t lo
 
     Dbt_copy<bdb_block_info> blockInfo(bInfo);
 
-    result = m_block_info->put(DB_DEFAULT_TX, &key, &blockInfo, 0);
+    result = m_block_info->put(DB_DEFAULT_TX, &zeroKeyVal, &blockInfo, DB_APPEND);
 
     if(result) {
       throw0(DB_ERROR("Failed to add block info to db transaction: "));
@@ -373,12 +373,22 @@ void BlockchainBDB::remove_block()
 
     Dbt_copy<uint32_t> k(m_height);
     Dbt_copy<crypto::hash> h;
-    if (m_block_hashes->get(DB_DEFAULT_TX, &k, &h, 0)) {
+    if (m_block_hashes->get(DB_DEFAULT_TX, &zeroKeyVal, &h, DB_GET_BOTH)) {
       throw1(BLOCK_DNE("Attempting to remove block that's not in the db"));
     }
 
     bdb_block_info *bInfo = (bdb_block_info *)&h;
-    blk_height
+    blk_height blkHeight = { bInfo->bi_hash, 0};
+    h.set_data((void *)&blkHeight);
+    h.set_size(sizeof(blkHeight));
+
+    auto result = m_block_heights->get(DB_DEFAULT_TX, &zeroKeyVal, &h, DB_GET_BOTH);
+    if(result)
+    {
+      throw1(DB_ERROR("\"Failed to locate block height by hash for removal: "));
+    }
+
+    //result = m_block_heights->del(DB_DEFAULT_TX, )
 
 #if 0
     if (m_blocks->del(DB_DEFAULT_TX, &k, 0))
@@ -931,8 +941,8 @@ void BlockchainBDB::open(const std::string& filename, const int db_flags)
         // Tell DB about Dbs that need duplicate support
         // Note: no need to tell about sorting,
         //   as the default is insertion order, which we want
-        m_tx_outputs->set_flags(DB_DUP);
-        m_output_amounts->set_flags(DB_DUP);
+        m_output_txs->set_flags(DB_DUPSORT);
+        m_output_amounts->set_flags(DB_DUPSORT);
 
         // Tell DB about fixed-size values.
         m_block_hashes->set_re_len(sizeof(crypto::hash));
