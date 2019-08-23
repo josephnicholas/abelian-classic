@@ -28,11 +28,12 @@
 #include "db_bdb.h"
 
 #include <boost/filesystem.hpp>
+#include <cstring> // memcpy
 #include <memory>  // std::unique_ptr
-#include <cstring>  // memcpy
+#include <string_tools.h>
 
-#include "cryptonote_basic/cryptonote_format_utils.h"
 #include "crypto/crypto.h"
+#include "cryptonote_basic/cryptonote_format_utils.h"
 #include "profile_tools.h"
 
 using epee::string_tools::pod_to_hex;
@@ -109,11 +110,17 @@ const char* const BDB_BLOCK_HASHES = "block_hashes";
 const char* const BDB_BLOCK_SIZES = "block_sizes";
 const char* const BDB_BLOCK_DIFFS = "block_diffs";
 const char* const BDB_BLOCK_COINS = "block_coins";
+const char* const BDB_BLOCK_INFO = "block_info";
 
 const char* const BDB_TXS = "txs";
 const char* const BDB_TX_UNLOCKS = "tx_unlocks";
 const char* const BDB_TX_HEIGHTS = "tx_heights";
 const char* const BDB_TX_OUTPUTS = "tx_outputs";
+const char* const BDB_TXS_PRUNED = "txs_pruned";
+const char* const BDB_TXS_PRUNABLE = "txs_prunable";
+const char* const BDB_TXS_PRUNABLE_HASH = "txs_prunable_hash";
+const char* const BDB_TXS_PRUNABLE_TIP = "txs_prunable_tip";
+const char* const BDB_TX_INDICES = "tx_indices";
 
 const char* const BDB_OUTPUT_TXS = "output_txs";
 const char* const BDB_OUTPUT_INDICES = "output_indices";
@@ -127,12 +134,18 @@ const char* const BDB_HF_VERSIONS = "hf_versions";
 
 const char* const BDB_PROPERTIES = "properties";
 
+const char* const BDB_TXPOOL_META = "txpool_meta";
+const char* const BDB_TXPOOL_BLOB = "txpool_blob";
+
 const unsigned int MB = 1024 * 1024;
 // ND: FIXME: db keeps running out of locks when doing full syncs. Possible bug??? Set it to 5K for now.
 const unsigned int DB_MAX_LOCKS = 5000;
 const unsigned int DB_BUFFER_LENGTH = 32 * MB;
 // 256MB cache adjust as necessary using DB_CONFIG
 const unsigned int DB_DEF_CACHESIZE = 256 * MB;
+
+const char zerokey[8] = {0};
+const void* zeroKval = {(void *)zerokey};
 
 #if defined(BDB_BULK_CAN_THREAD)
 const unsigned int DB_BUFFER_COUNT = tools::get_max_concurrency();
@@ -224,7 +237,28 @@ struct Dbt_safe : public Dbt
 namespace cryptonote
 {
 
-void BlockchainBDB::add_block(const block& blk, size_t block_weight, const difficulty_type& cumulative_difficulty, const uint64_t& coins_generated, const crypto::hash& blk_hash)
+typedef struct blk_height {
+  crypto::hash bh_hash;
+  uint64_t bh_height;
+} blk_height;
+
+typedef struct bdb_block_info_4
+{
+  uint64_t bi_height;
+  uint64_t bi_timestamp;
+  uint64_t bi_coins;
+  uint64_t bi_weight; // a size_t really but we need 32-bit compat
+  uint64_t bi_diff_lo;
+  uint64_t bi_diff_hi;
+  crypto::hash bi_hash;
+  uint64_t bi_cum_rct;
+  uint64_t bi_long_term_block_weight;
+} bdb_block_info_4;
+
+typedef bdb_block_info_4 bdb_block_info;
+
+void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t long_term_block_weight, const difficulty_type& cumulative_difficulty, const uint64_t& coins_generated,
+                              uint64_t num_rct_outs, const crypto::hash& blk_hash)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
@@ -245,16 +279,66 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, const diffi
         }
         uint32_t parent_height = parent_h;
         if (parent_height != m_height)
-            throw0(BLOCK_PARENT_DNE("Top block is not new block's parent"));
+        {
+          throw0(BLOCK_PARENT_DNE("Top block is not new block's parent"));
+        }
     }
+
+    auto result = 0;
 
     Dbt_copy<uint32_t> key(m_height + 1);
 
     Dbt_copy<blobdata> blob(block_to_blob(blk));
     auto res = m_blocks->put(DB_DEFAULT_TX, &key, &blob, 0);
-    if (res)
-        throw0(DB_ERROR("Failed to add block blob to db transaction."));
+    if (res) {
+      throw0(DB_ERROR("Failed to add block blob to db transaction."));
+    }
 
+    bdb_block_info bInfo;
+
+    bInfo.bi_height = m_height;
+    bInfo.bi_timestamp = blk.timestamp;
+    bInfo.bi_coins = coins_generated;
+    bInfo.bi_weight = block_weight;
+    bInfo.bi_diff_hi = ((cumulative_difficulty >> 64) & 0xffffffffffffffff).convert_to<uint64_t>();
+    bInfo.bi_diff_lo = (cumulative_difficulty & 0xffffffffffffffff).convert_to<uint64_t>();
+    bInfo.bi_hash = blk_hash;
+    bInfo.bi_cum_rct = num_rct_outs;
+    if(blk.major_version >= 4)
+    {
+      uint64_t lastHeight = m_height - 1;
+      Dbt_copy<uint32_t> lHeight(lastHeight);
+      result = m_block_info->get(DB_DEFAULT_TX, &key, &lHeight, DB_GET_BOTH);
+
+      if(result)
+      {
+        throw1(BLOCK_DNE("Failed to get block info: "));
+      }
+      const bdb_block_info *bInfoPrev = (const bdb_block_info*)&lHeight;
+      bInfo.bi_cum_rct += bInfoPrev->bi_cum_rct;
+
+    }
+    bInfo.bi_long_term_block_weight = long_term_block_weight;
+
+    Dbt_copy<bdb_block_info> blockInfo(bInfo);
+
+    result = m_block_info->put(DB_DEFAULT_TX, &key, &blockInfo, 0);
+
+    if(result) {
+      throw0(DB_ERROR("Failed to add block info to db transaction: "));
+    }
+
+    result = m_block_heights->put(DB_DEFAULT_TX, &val_h, &key, 0);
+
+    if (result)
+    {
+      throw0(DB_ERROR("Failed to add block height by hash to db transaction."));
+    }
+
+    m_cum_size += block_weight;
+    m_cum_count++;
+
+#if 0
     Dbt_copy<size_t> sz(block_weight);
     if (m_block_sizes->put(DB_DEFAULT_TX, &key, &sz, 0))
         throw0(DB_ERROR("Failed to add block size to db transaction."));
@@ -276,6 +360,7 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, const diffi
 
     if (m_block_hashes->put(DB_DEFAULT_TX, &key, &val_h, 0))
         throw0(DB_ERROR("Failed to add block hash to db transaction."));
+#endif
 }
 
 void BlockchainBDB::remove_block()
@@ -288,9 +373,14 @@ void BlockchainBDB::remove_block()
 
     Dbt_copy<uint32_t> k(m_height);
     Dbt_copy<crypto::hash> h;
-    if (m_block_hashes->get(DB_DEFAULT_TX, &k, &h, 0))
-        throw1(BLOCK_DNE("Attempting to remove block that's not in the db"));
+    if (m_block_hashes->get(DB_DEFAULT_TX, &k, &h, 0)) {
+      throw1(BLOCK_DNE("Attempting to remove block that's not in the db"));
+    }
 
+    bdb_block_info *bInfo = (bdb_block_info *)&h;
+    blk_height
+
+#if 0
     if (m_blocks->del(DB_DEFAULT_TX, &k, 0))
         throw1(DB_ERROR("Failed to add removal of block to db transaction"));
 
@@ -311,6 +401,7 @@ void BlockchainBDB::remove_block()
 
     if (m_block_hashes->del(DB_DEFAULT_TX, &k, 0))
         throw1(DB_ERROR("Failed to add removal of block hash to db transaction"));
+#endif
 }
 
 void BlockchainBDB::add_transaction_data(const crypto::hash& blk_hash, const transaction& tx, const crypto::hash& tx_hash, const crypto::hash& tx_prunable_hash)

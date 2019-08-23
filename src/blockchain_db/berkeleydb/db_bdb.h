@@ -234,162 +234,215 @@ public:
   BlockchainBDB(bool batch_transactions=false);
   ~BlockchainBDB();
 
-  virtual void open(const std::string& filename, const int db_flags);
+  void open(const std::string& filename, const int db_flags) override ;
 
-  virtual void close();
+  void close() override ;
 
-  virtual void sync();
+  void sync() override ;
 
-  virtual void reset();
+  void safesyncmode(const bool onoff) override ;
 
-  virtual std::vector<std::string> get_filenames() const;
+  void reset() override ;
 
-  virtual bool remove_data_file(const std::string& folder);
+  std::vector<std::string> get_filenames() const override ;
 
-  virtual std::string get_db_name() const;
+  bool remove_data_file(const std::string& folder) const override ;
 
-  virtual bool lock();
+  std::string get_db_name() const override ;
 
-  virtual void unlock();
+  bool lock() override ;
 
-  virtual bool block_exists(const crypto::hash& h, uint64_t *height = NULL) const;
+  void unlock() override ;
 
-  virtual block get_block(const crypto::hash& h) const;
+  bool block_exists(const crypto::hash& h, uint64_t *height = nullptr) const override ;
 
-  virtual uint64_t get_block_height(const crypto::hash& h) const;
+  uint64_t get_block_height(const crypto::hash& h) const override ;
 
-  virtual block_header get_block_header(const crypto::hash& h) const;
+  block_header get_block_header(const crypto::hash& h) const override;
 
-  virtual block get_block_from_height(const uint64_t& height) const;
+  cryptonote::blobdata get_block_blob(const crypto::hash& h) const override;
 
-  virtual uint64_t get_block_timestamp(const uint64_t& height) const;
+  cryptonote::blobdata get_block_blob_from_height(const uint64_t& height) const override ;
 
-  virtual uint64_t get_top_block_timestamp() const;
+  std::vector<uint64_t> get_block_cumulative_rct_outputs(const std::vector<uint64_t> &heights) const override ;
 
-  virtual size_t get_block_weight(const uint64_t& height) const;
+  uint64_t get_block_timestamp(const uint64_t& height) const override ;
 
-  virtual difficulty_type get_block_cumulative_difficulty(const uint64_t& height) const;
+  uint64_t get_top_block_timestamp() const override ;
 
-  virtual difficulty_type get_block_difficulty(const uint64_t& height) const;
+  size_t get_block_weight(const uint64_t& height) const override;
 
-  virtual uint64_t get_block_already_generated_coins(const uint64_t& height) const;
+  std::vector<uint64_t> get_block_weights(uint64_t start_height, size_t count) const override;
 
-  virtual crypto::hash get_block_hash_from_height(const uint64_t& height) const;
+  difficulty_type get_block_cumulative_difficulty(const uint64_t& height) const override;
 
-  virtual std::vector<block> get_blocks_range(const uint64_t& h1, const uint64_t& h2) const;
+  difficulty_type get_block_difficulty(const uint64_t& height) const override;
 
-  virtual std::vector<crypto::hash> get_hashes_range(const uint64_t& h1, const uint64_t& h2) const;
+  uint64_t get_block_already_generated_coins(const uint64_t& height) const override;
 
-  virtual crypto::hash top_block_hash() const;
+  uint64_t get_block_long_term_weight(const uint64_t& height) const override ;
 
-  virtual block get_top_block() const;
+  std::vector<uint64_t> get_long_term_block_weights(uint64_t start_height, size_t count) const override ;
 
-  virtual uint64_t height() const;
+  crypto::hash get_block_hash_from_height(const uint64_t& height) const override ;
 
-  virtual bool tx_exists(const crypto::hash& h) const;
+  std::vector<block> get_blocks_range(const uint64_t& h1, const uint64_t& h2) const override ;
 
-  virtual uint64_t get_tx_unlock_time(const crypto::hash& h) const;
+  std::vector<crypto::hash> get_hashes_range(const uint64_t& h1, const uint64_t& h2) const override;
 
-  virtual transaction get_tx(const crypto::hash& h) const;
+  crypto::hash top_block_hash(uint64_t *block_height) const override ;
 
-  virtual uint64_t get_tx_count() const;
+  block get_top_block() const override ;
 
-  virtual std::vector<transaction> get_tx_list(const std::vector<crypto::hash>& hlist) const;
+  uint64_t height() const override ;
 
-  virtual uint64_t get_tx_block_height(const crypto::hash& h) const;
+  bool tx_exists(const crypto::hash& h) const override;
+  bool tx_exists(const crypto::hash& h, uint64_t& tx_index) const override;
 
-  virtual uint64_t get_num_outputs(const uint64_t& amount) const;
+  uint64_t get_tx_unlock_time(const crypto::hash& h) const override ;
 
-  virtual uint64_t get_indexing_base() const { return 1; }
+  bool get_tx_blob(const crypto::hash& h, cryptonote::blobdata &tx) const override;
+  bool get_pruned_tx_blob(const crypto::hash& h, cryptonote::blobdata &tx) const override;
+  bool get_prunable_tx_blob(const crypto::hash& h, cryptonote::blobdata &tx) const override;
+  bool get_prunable_tx_hash(const crypto::hash& tx_hash, crypto::hash &prunable_hash) const override;
 
-  virtual output_data_t get_output_key(const uint64_t& amount, const uint64_t& index);
-  virtual void get_output_key(const uint64_t &amount, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs);
+  uint64_t get_tx_count() const override;
 
-  virtual tx_out_index get_output_tx_and_index_from_global(const uint64_t& index) const;
-  virtual void get_output_tx_and_index_from_global(const std::vector<uint64_t> &global_indices,
-          std::vector<tx_out_index> &tx_out_indices) const;
+  std::vector<transaction> get_tx_list(const std::vector<crypto::hash>& hlist) const override ;
 
-  virtual tx_out_index get_output_tx_and_index(const uint64_t& amount, const uint64_t& index);
-  virtual void get_output_tx_and_index(const uint64_t& amount, const std::vector<uint64_t> &offsets, std::vector<tx_out_index> &indices);
+  uint64_t get_tx_block_height(const crypto::hash& h) const override;
 
-  virtual std::vector<uint64_t> get_tx_amount_output_indices(const crypto::hash& h) const;
+  uint64_t get_num_outputs(const uint64_t& amount) const override;
 
-  virtual bool has_key_image(const crypto::key_image& img) const;
+  output_data_t get_output_key(const uint64_t& amount, const uint64_t& index, bool include_commitmemt) const override ;
+  void get_output_key(const epee::span<const uint64_t> &amounts, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs, bool allow_partial = false) const override ;
 
-  virtual uint64_t add_block( const block& blk
-                            , size_t block_weight
-                            , const difficulty_type& cumulative_difficulty
-                            , const uint64_t& coins_generated
-                            , const std::vector<transaction>& txs
-                            );
+  tx_out_index get_output_tx_and_index_from_global(const uint64_t& index) const override ;
+  virtual void get_output_tx_and_index_from_global(const std::vector<uint64_t> &global_indices, std::vector<tx_out_index> &tx_out_indices) const;
 
-  virtual void set_batch_transactions(bool batch_transactions);
-  virtual bool batch_start(uint64_t batch_num_blocks=0);
+  tx_out_index get_output_tx_and_index(const uint64_t& amount, const uint64_t& index) const override;
+  void get_output_tx_and_index(const uint64_t& amount, const std::vector<uint64_t> &offsets, std::vector<tx_out_index> &indices) const override ;
+
+  std::vector<std::vector<uint64_t>> get_tx_amount_output_indices(const uint64_t tx_id, size_t n_txes) const override ;
+
+  bool has_key_image(const crypto::key_image& img) const override ;
+
+  void add_txpool_tx(const crypto::hash &txid, const cryptonote::blobdata &blob, const txpool_tx_meta_t& meta) override ;
+
+  void update_txpool_tx(const crypto::hash &txid, const txpool_tx_meta_t& meta) override;
+  uint64_t get_txpool_tx_count(bool include_unrelayed_txes = true) const override;
+  bool txpool_has_tx(const crypto::hash &txid) const override;
+  void remove_txpool_tx(const crypto::hash& txid) override;
+  bool get_txpool_tx_meta(const crypto::hash& txid, txpool_tx_meta_t &meta) const override;
+  bool get_txpool_tx_blob(const crypto::hash& txid, cryptonote::blobdata &bd) const override;
+  cryptonote::blobdata get_txpool_tx_blob(const crypto::hash& txid) const override;
+  uint32_t get_blockchain_pruning_seed() const override;
+  bool prune_blockchain(uint32_t pruning_seed = 0) override;
+  bool update_pruning() override;
+  bool check_pruning() override;
+
+   bool for_all_txpool_txes(std::function<bool(const crypto::hash&, const txpool_tx_meta_t&, const cryptonote::blobdata*)> f, bool include_blob = false, bool include_unrelayed_txes = true) const override ;
+
+  bool for_all_key_images(std::function<bool(const crypto::key_image&)>) const override ;
+
+  bool for_blocks_range(const uint64_t& h1, const uint64_t& h2, std::function<bool(uint64_t, const crypto::hash&, const cryptonote::block&)>) const override ;
+  bool for_all_transactions(std::function<bool(const crypto::hash&, const cryptonote::transaction&)>, bool pruned) const override ;
+  bool for_all_outputs(std::function<bool(uint64_t amount, const crypto::hash &tx_hash, uint64_t height, size_t tx_idx)> f) const override ;
+  bool for_all_outputs(uint64_t amount, const std::function<bool(uint64_t height)> &f) const override ;
+
+  uint64_t add_block( const std::pair<block, blobdata>& blk
+                    , size_t block_weight
+                    , uint64_t long_term_block_weight
+                    , const difficulty_type& cumulative_difficulty
+                    , const uint64_t& coins_generated
+                    , const std::vector<std::pair<transaction, blobdata>>& txs
+                    ) override;
+
+  void set_batch_transactions(bool batch_transactions) override ;
+  bool batch_start(uint64_t batch_num_blocks=0, uint64_t batch_bytes=0) override ;
   virtual void batch_commit();
-  virtual void batch_stop();
-  virtual void batch_abort();
+  void batch_stop() override;
+  void batch_abort() override ;
 
-  virtual void block_txn_start(bool readonly);
-  virtual void block_txn_stop();
-  virtual void block_txn_abort();
+  void block_wtxn_start() override;
+  void block_wtxn_stop() override;
+  void block_wtxn_abort() override;
+  bool block_rtxn_start() const override;
+  void block_rtxn_stop() const override;
+  void block_rtxn_abort() const override;
 
-  virtual void pop_block(block& blk, std::vector<transaction>& txs);
+  void pop_block(block& blk, std::vector<transaction>& txs) override;
 
 #if defined(BDB_BULK_CAN_THREAD)
   virtual bool can_thread_bulk_indices() const { return true; }
 #else
-  virtual bool can_thread_bulk_indices() const { return false; }
+  bool can_thread_bulk_indices() const override { return false; }
 #endif
 
   /**
    * @brief return a histogram of outputs on the blockchain
    *
    * @param amounts optional set of amounts to lookup
+   * @param unlocked whether to restrict count to unlocked outputs
+   * @param recent_cutoff timestamp to determine which outputs are recent
+   * @param min_count return only amounts with at least that many instances
    *
    * @return a set of amount/instances
    */
-  std::map<uint64_t, uint64_t> get_output_histogram(const std::vector<uint64_t> &amounts) const;
+  std::map<uint64_t, std::tuple<uint64_t, uint64_t, uint64_t>> get_output_histogram(const std::vector<uint64_t> &amounts, bool unlocked, uint64_t recent_cutoff, uint64_t min_count) const override;
+
+  bool get_output_distribution(uint64_t amount, uint64_t from_height, uint64_t to_height, std::vector<uint64_t> &distribution, uint64_t &base) const override ;
 
 private:
+
   virtual void add_block( const block& blk
-                , size_t block_weight
-                , const difficulty_type& cumulative_difficulty
-                , const uint64_t& coins_generated
-                , const crypto::hash& block_hash
-                );
+              , size_t block_weight
+              , uint64_t long_term_block_weight
+              , const difficulty_type& cumulative_difficulty
+              , const uint64_t& coins_generated
+              , uint64_t num_rct_outs
+              , const crypto::hash& block_hash
+              ) override;
 
-  virtual void remove_block();
+  void remove_block() override;
 
-  virtual void add_transaction_data(const crypto::hash& blk_hash, const transaction& tx, const crypto::hash& tx_hash, const crypto::hash& tx_prunable_hash);
+  uint64_t add_transaction_data(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& tx, const crypto::hash& tx_hash, const crypto::hash& tx_prunable_hash) override ;
 
-  virtual void remove_transaction_data(const crypto::hash& tx_hash, const transaction& tx);
+  void remove_transaction_data(const crypto::hash& tx_hash, const transaction& tx) override ;
 
-  virtual void add_output(const crypto::hash& tx_hash, const tx_out& tx_output, const uint64_t& local_index, const uint64_t unlock_time, const rct::key *commitment);
+  uint64_t add_output(const crypto::hash& tx_hash,
+                              const tx_out& tx_output,
+                              const uint64_t& local_index,
+                              const uint64_t unlock_time,
+                              const rct::key *commitment
+  ) override ;
 
-  virtual void remove_output(const tx_out& tx_output);
+  void add_tx_amount_output_indices(const uint64_t tx_id,
+                                            const std::vector<uint64_t>& amount_output_indices
+  ) override ;
 
-  void remove_tx_outputs(const crypto::hash& tx_hash, const transaction& tx);
+  void remove_output(const uint64_t amount, const uint64_t& out_index);
+
+  void remove_tx_outputs(const uint64_t tx_id, const transaction& tx);
 
   void remove_output(const uint64_t& out_index, const uint64_t amount);
   void remove_amount_output_index(const uint64_t amount, const uint64_t global_output_index);
 
-  virtual void add_spent_key(const crypto::key_image& k_image);
+  void prune_outputs(uint64_t amount) override;
 
-  virtual void remove_spent_key(const crypto::key_image& k_image);
+  void add_spent_key(const crypto::key_image& k_image) override;
+
+  void remove_spent_key(const crypto::key_image& k_image) override;
 
   void get_output_global_indices(const uint64_t& amount, const std::vector<uint64_t> &offsets, std::vector<uint64_t> &global_indices);
 
-  virtual bool for_all_key_images(std::function<bool(const crypto::key_image&)>) const;
-
-  virtual bool for_all_blocks(std::function<bool(uint64_t, const crypto::hash&, const cryptonote::block&)>) const;
-  virtual bool for_all_transactions(std::function<bool(const crypto::hash&, const cryptonote::transaction&)>, bool pruned) const;
-  virtual bool for_all_outputs(std::function<bool(uint64_t amount, const crypto::hash &tx_hash, size_t tx_idx)> f) const;
+  uint64_t num_outputs() const;
 
   // Hard fork related storage
-  virtual void set_hard_fork_version(uint64_t height, uint8_t version);
-  virtual uint8_t get_hard_fork_version(uint64_t height) const;
-  virtual void check_hard_fork_info();
-  virtual void drop_hard_fork_info();
+  void set_hard_fork_version(uint64_t height, uint8_t version) override;
+  uint8_t get_hard_fork_version(uint64_t height) const override;
+  void check_hard_fork_info() override;
+  void drop_hard_fork_info() override;
 
   /**
    * @brief get the global index of the index-th output of the given amount
@@ -400,24 +453,31 @@ private:
    * @return the global index of the desired output
    */
   uint64_t get_output_global_index(const uint64_t& amount, const uint64_t& index);
-  output_data_t get_output_key(const uint64_t& global_index) const;
+
   void checkpoint_worker() const;
   void check_open() const;
 
   virtual bool is_read_only() const;
 
+  virtual uint64_t get_database_size() const;
+
   //
   // fix up anything that may be wrong due to past bugs
   virtual void fixup();
+
+  uint64_t get_max_block_size() override;
+  void add_max_block_size(uint64_t sz) override;
 
   bool m_run_checkpoint;
   std::unique_ptr<boost::thread> m_checkpoint_thread;
   typedef bdb_safe_buffer<void *> bdb_safe_buffer_t;
   bdb_safe_buffer_t m_buffer;
 
+private:
   DbEnv* m_env;
 
   Db* m_blocks;
+  Db* m_block_info;
   Db* m_block_heights;
   Db* m_block_hashes;
   Db* m_block_timestamps;
@@ -446,6 +506,9 @@ private:
   uint64_t m_num_outputs;
   std::string m_folder;
   bdb_txn_safe *m_write_txn;
+
+  mutable uint64_t m_cum_size;	// used in batch size estimation
+  mutable unsigned int m_cum_count;
 
   bool m_batch_transactions; // support for batch transactions
 };
