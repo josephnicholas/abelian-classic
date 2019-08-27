@@ -45,6 +45,9 @@ message(STATUS "CMake version ${CMAKE_VERSION}")
 
 project(abelian)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
 enable_language(C ASM)
 
 function (die msg)
@@ -361,7 +364,7 @@ endif()
 # Set default blockchain storage location:
 # memory was the default in Cryptonote before Monero implemented LMDB, it still works but is unnecessary.
 # set(DATABASE memory)
-set(DATABASE lmdb)
+set(DATABASE berkeleydb)
 
 if (DEFINED ENV{DATABASE})
   set(DATABASE $ENV{DATABASE})
@@ -384,9 +387,9 @@ if (DATABASE STREQUAL "lmdb")
   add_definitions("-DDEFAULT_DB_TYPE=\"lmdb\"")
 elseif (DATABASE STREQUAL "berkeleydb")
   find_package(BerkeleyDB)
-  if(NOT BERKELEY_DB)
-      die("Found BerkeleyDB includes, but could not find BerkeleyDB library. Please make sure you have installed libdb and libdb-dev / libdb++-dev or the equivalent.")
-  else()
+  #if(NOT BERKELEY_DB)
+  #    die("Found BerkeleyDB includes, but could not find BerkeleyDB library. Please make sure you have installed libdb and libdb-dev / libdb++-dev or the equivalent.")
+  #else()
     message(STATUS "Found BerkeleyDB include (db.h) in ${BERKELEY_DB_INCLUDE_DIR}")
     if(BERKELEY_DB_LIBRARIES)
       message(STATUS "Found BerkeleyDB shared library")
@@ -398,7 +401,7 @@ elseif (DATABASE STREQUAL "berkeleydb")
     else()
       die("Found BerkeleyDB includes, but could not find BerkeleyDB library. Please make sure you have installed libdb and libdb-dev / libdb++-dev or the equivalent.")
     endif()
-  endif()
+  #endif()
 
   message(STATUS "Using Berkeley DB as default DB type")
   add_definitions("-DDEFAULT_DB_TYPE=\"berkeley\"")
@@ -637,7 +640,7 @@ else()
     set(STATIC_ASSERT_FLAG "-Dstatic_assert=_Static_assert")
   endif()
 
-  try_compile(STATIC_ASSERT_CPP_RES "${CMAKE_CURRENT_BINARY_DIR}/static-assert" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/test-static-assert.cpp" COMPILE_DEFINITIONS "-std=c++11")
+  try_compile(STATIC_ASSERT_CPP_RES "${CMAKE_CURRENT_BINARY_DIR}/static-assert" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/test-static-assert.cpp" COMPILE_DEFINITIONS "-std=c++17")
   if(STATIC_ASSERT_CPP_RES)
     set(STATIC_ASSERT_CPP_FLAG "")
   else()
@@ -723,7 +726,7 @@ else()
   message(STATUS "Using linker security hardening flags: ${LD_SECURITY_FLAGS}")
 
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11 -D_GNU_SOURCE ${MINGW_FLAG} ${STATIC_ASSERT_FLAG} ${WARNINGS} ${C_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${C_SECURITY_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -D_GNU_SOURCE ${MINGW_FLAG} ${STATIC_ASSERT_CPP_FLAG} ${WARNINGS} ${CXX_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${CXX_SECURITY_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -D_GNU_SOURCE ${MINGW_FLAG} ${STATIC_ASSERT_CPP_FLAG} ${WARNINGS} ${CXX_WARNINGS} ${COVERAGE_FLAGS} ${PIC_FLAG} ${CXX_SECURITY_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LD_SECURITY_FLAGS} ${LD_BACKCOMPAT_FLAGS}")
 
   # With GCC 6.1.1 the compiled binary malfunctions due to aliasing. Until that

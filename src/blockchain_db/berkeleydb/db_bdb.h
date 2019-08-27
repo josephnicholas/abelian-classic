@@ -39,6 +39,11 @@
 namespace cryptonote
 {
 
+typedef struct txindex {
+  crypto::hash key;
+  tx_data_t data;
+} txindex;
+
 struct bdb_txn_safe
 {
   bdb_txn_safe() : m_txn(NULL) { }
@@ -476,6 +481,51 @@ private:
 private:
   DbEnv* m_env;
 
+  typedef struct bdb_txn_cursors
+  {
+    Dbc *m_txc_blocks;
+    Dbc *m_txc_block_heights;
+    Dbc *m_txc_block_info;
+
+    Dbc *m_txc_output_txs;
+    Dbc *m_txc_output_amounts;
+
+    Dbc *m_txc_txs;
+    Dbc *m_txc_txs_pruned;
+    Dbc *m_txc_txs_prunable;
+    Dbc *m_txc_txs_prunable_hash;
+    Dbc *m_txc_txs_prunable_tip;
+    Dbc *m_txc_tx_indices;
+    Dbc *m_txc_tx_outputs;
+
+    Dbc *m_txc_spent_keys;
+
+    Dbc *m_txc_txpool_meta;
+    Dbc *m_txc_txpool_blob;
+
+    Dbc *m_txc_hf_versions;
+
+    Dbc *m_txc_properties;
+  } bdb_txn_cursors;
+
+  #define m_cur_blocks	                m_cursors->m_txc_blocks
+  #define m_cur_block_heights	        m_cursors->m_txc_block_heights
+  #define m_cur_block_info	            m_cursors->m_txc_block_info
+  #define m_cur_output_txs	            m_cursors->m_txc_output_txs
+  #define m_cur_output_amounts	        m_cursors->m_txc_output_amounts
+  #define m_cur_txs	                    m_cursors->m_txc_txs
+  #define m_cur_txs_pruned	            m_cursors->m_txc_txs_pruned
+  #define m_cur_txs_prunable	        m_cursors->m_txc_txs_prunable
+  #define m_cur_txs_prunable_hash	    m_cursors->m_txc_txs_prunable_hash
+  #define m_cur_txs_prunable_tip	    m_cursors->m_txc_txs_prunable_tip
+  #define m_cur_tx_indices	            m_cursors->m_txc_tx_indices
+  #define m_cur_tx_outputs	            m_cursors->m_txc_tx_outputs
+  #define m_cur_spent_keys	            m_cursors->m_txc_spent_keys
+  #define m_cur_txpool_meta	            m_cursors->m_txc_txpool_meta
+  #define m_cur_txpool_blob	            m_cursors->m_txc_txpool_blob
+  #define m_cur_hf_versions	            m_cursors->m_txc_hf_versions
+  #define m_cur_properties	            m_cursors->m_txc_properties
+
   Db* m_blocks;
   Db* m_block_info;
   Db* m_block_heights;
@@ -489,6 +539,12 @@ private:
   Db* m_tx_unlocks;
   Db* m_tx_heights;
   Db* m_tx_outputs;
+
+  Db* m_txs_indices;
+  Db* m_txs_pruned;
+  Db* m_txs_prunable;
+  Db* m_txs_prunable_hash;
+  Db* m_txs_prunable_tip;
 
   Db* m_output_txs;
   Db* m_output_indices;
@@ -511,6 +567,8 @@ private:
   mutable unsigned int m_cum_count;
 
   bool m_batch_transactions; // support for batch transactions
+
+  bdb_txn_cursors m_wcursors;
 };
 
 }  // namespace cryptonote

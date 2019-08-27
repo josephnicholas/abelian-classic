@@ -263,16 +263,21 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t lo
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
 
+    // Open block info cursor
+    bdb_txn_cursors *m_cursors = &m_wcursors;
+    m_block_heights->cursor(DB_DEFAULT_TX, &m_cur_block_heights, 0);
+
     blk_height bHeight = {blk_hash, m_height};
     Dbt_copy<blk_height> val_h(bHeight);
-    if (m_block_heights->exists(DB_DEFAULT_TX, &val_h, 0) == 0)
+    if (m_cur_block_heights->get(&zeroKeyVal, &val_h, DB_GET_BOTH) == 0)
+    {
         throw1(BLOCK_EXISTS("Attempting to add block that's already in the db"));
-
+    }
     if (m_height > 0)
     {
         Dbt_copy<crypto::hash> parent_key(blk.prev_id);
         Dbt_copy<uint32_t> parent_h;
-        if (m_block_heights->get(DB_DEFAULT_TX, &zeroKeyVal, &parent_h, DB_GET_BOTH))
+        if (m_cur_block_heights->get(&zeroKeyVal, &parent_h, DB_GET_BOTH))
         {
             LOG_PRINT_L3("m_height: " << m_height);
             LOG_PRINT_L3("parent_key: " << blk.prev_id);
@@ -287,9 +292,13 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t lo
 
     auto result = 0;
 
+    //Open block cursor
+    m_blocks->cursor(DB_DEFAULT_TX, &m_cur_blocks, 0);
+    m_block_info->cursor(DB_DEFAULT_TX, &m_cur_block_info, 0);
+
     Dbt_copy<uint64_t> key(m_height);
     Dbt_copy<blobdata> blob(block_to_blob(blk));
-    auto res = m_blocks->put(DB_DEFAULT_TX, &key, &blob, DB_APPEND);
+    auto res = m_cur_blocks->put(&key, &blob, DB_APPEND);
     if (res) {
       throw0(DB_ERROR("Failed to add block blob to db transaction."));
     }
@@ -308,13 +317,13 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t lo
     {
       uint64_t lastHeight = m_height - 1;
       Dbt_copy<uint32_t> lHeight(lastHeight);
-      result = m_block_info->get(DB_DEFAULT_TX, &zeroKeyVal, &lHeight, DB_GET_BOTH);
+      result = m_cur_block_info->get(&zeroKeyVal, &lHeight, DB_GET_BOTH);
 
       if(result)
       {
         throw1(BLOCK_DNE("Failed to get block info: "));
       }
-      const bdb_block_info *bInfoPrev = (const bdb_block_info*)lHeight.get_data();
+      const auto *bInfoPrev = (const bdb_block_info*)lHeight.get_data();
       bInfo.bi_cum_rct += bInfoPrev->bi_cum_rct;
 
     }
@@ -322,13 +331,16 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t lo
 
     Dbt_copy<bdb_block_info> blockInfo(bInfo);
 
-    result = m_block_info->put(DB_DEFAULT_TX, &zeroKeyVal, &blockInfo, DB_APPEND);
+    result = m_cur_block_info->put(&zeroKeyVal, &blockInfo, DB_APPEND);
 
     if(result) {
       throw0(DB_ERROR("Failed to add block info to db transaction: "));
     }
 
-    result = m_block_heights->put(DB_DEFAULT_TX, &val_h, &key, 0);
+    //Open block height cursor
+    m_block_heights->cursor(DB_DEFAULT_TX, &m_cur_block_heights, 0);
+
+    result = m_cur_block_heights->put(&val_h, &key, 0);
 
     if (result)
     {
@@ -338,6 +350,9 @@ void BlockchainBDB::add_block(const block& blk, size_t block_weight, uint64_t lo
     m_cum_size += block_weight;
     m_cum_count++;
 
+    // Close cursor.
+    m_cur_block_heights->close();
+    m_cur_blocks->close();
 #if 0
     Dbt_copy<size_t> sz(block_weight);
     if (m_block_sizes->put(DB_DEFAULT_TX, &key, &sz, 0))
@@ -371,24 +386,54 @@ void BlockchainBDB::remove_block()
     if (m_height == 0)
         throw0(BLOCK_DNE ("Attempting to remove block from an empty blockchain"));
 
-    Dbt_copy<uint32_t> k(m_height);
-    Dbt_copy<crypto::hash> h;
-    if (m_block_hashes->get(DB_DEFAULT_TX, &zeroKeyVal, &h, DB_GET_BOTH)) {
+    bdb_txn_cursors *m_cursors = &m_wcursors;
+
+    // Open cursors
+    m_block_info->cursor(DB_DEFAULT_TX, &m_cur_block_info, 0);
+    m_block_heights->cursor(DB_DEFAULT_TX, &m_cur_block_heights, 0);
+    m_blocks->cursor(DB_DEFAULT_TX, &m_cur_blocks, 0);
+
+    Dbt_copy<uint32_t> k(m_height - 1);
+    Dbt_copy<uint32_t> h = k;
+    auto result = m_cur_block_info->get(&zeroKeyVal, &h, DB_GET_BOTH);
+
+    if (result) {
       throw1(BLOCK_DNE("Attempting to remove block that's not in the db"));
     }
 
-    bdb_block_info *bInfo = (bdb_block_info *)&h;
+    auto *bInfo = (bdb_block_info *)&h;
     blk_height blkHeight = { bInfo->bi_hash, 0};
     h.set_data((void *)&blkHeight);
     h.set_size(sizeof(blkHeight));
 
-    auto result = m_block_heights->get(DB_DEFAULT_TX, &zeroKeyVal, &h, DB_GET_BOTH);
+    result = m_cur_block_heights->get(&zeroKeyVal, &h, DB_GET_BOTH);
     if(result)
     {
       throw1(DB_ERROR("\"Failed to locate block height by hash for removal: "));
     }
 
-    //result = m_block_heights->del(DB_DEFAULT_TX, )
+    result = m_cur_block_heights->del(0);
+    if(result)
+    {
+      throw1(DB_ERROR("\"Failed to add removal of block height by hash to db transaction: "));
+    }
+
+    result = m_cur_blocks->del(0);
+    if(result)
+    {
+      throw1(DB_ERROR("\"Failed to add removal of block to db transaction: "));
+    }
+
+    result = m_cur_block_info->del(0);
+    if(result)
+    {
+      throw1(DB_ERROR("\"Failed to add removal of block info to db transaction: "));
+    }
+
+    // Close cursors
+    m_cur_block_info->close();
+    m_cur_blocks->close();
+    m_cur_block_heights->close();
 
 #if 0
     if (m_blocks->del(DB_DEFAULT_TX, &k, 0))
@@ -414,17 +459,114 @@ void BlockchainBDB::remove_block()
 #endif
 }
 
-void BlockchainBDB::add_transaction_data(const crypto::hash& blk_hash, const transaction& tx, const crypto::hash& tx_hash, const crypto::hash& tx_prunable_hash)
+uint64_t BlockchainBDB::add_transaction_data(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& txp, const crypto::hash& tx_hash, const crypto::hash& tx_prunable_hash)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
+    bdb_txn_cursors *m_cursors = &m_wcursors;
 
+    auto result = 0;
+    auto tx_id = get_tx_count();
+
+    // Open cursors
+    m_txs_pruned->cursor(DB_DEFAULT_TX, &m_cur_txs_pruned, 0);
+    m_txs_prunable->cursor(DB_DEFAULT_TX, &m_cur_txs_prunable, 0);
+    m_txs_prunable_hash->cursor(DB_DEFAULT_TX, &m_cur_txs_prunable_hash, 0);
+    m_txs_prunable_tip->cursor(DB_DEFAULT_TX, &m_cur_txs_prunable_tip, 0);
+    m_txs_indices->cursor(DB_DEFAULT_TX, &m_cur_tx_indices, 0);
+
+    Dbt_copy<uint64_t> val_tx_id(tx_id);
     Dbt_copy<crypto::hash> val_h(tx_hash);
+    result = m_cur_tx_indices->get(&zeroKeyVal, &val_h, DB_GET_BOTH);
+    if(result == 0)
+    {
+      auto *tip = static_cast<txindex *>(val_h.get_data());
+      throw1(TX_EXISTS(std::string("Attempting to add transaction that's already in the db: ").append(std::to_string(tip->data.tx_id)).c_str()));
+    }
+    else if (result != DB_NOTFOUND)
+    {
+      throw1(DB_ERROR(std::string("Error checking if tx index exists for tx hash ").append(epee::string_tools::pod_to_hex(tx_hash) + ": " + result).c_str()));
+    }
 
-    if (m_txs->exists(DB_DEFAULT_TX, &val_h, 0) == 0)
-        throw1(TX_EXISTS("Attempting to add transaction that's already in the db"));
+    auto &[tx, blob] = txp;
+    txindex tIndex;
+    tIndex.key = tx_hash;
+    tIndex.data.tx_id = tx_id;
+    tIndex.data.unlock_time = tx.unlock_time;
+    tIndex.data.block_id = m_height;
 
-    Dbt_copy<blobdata> blob(tx_to_blob(tx));
+    val_h.set_size(sizeof(tIndex));
+    val_h.set_data(static_cast<void *>(&tIndex));
+
+    result = m_cur_tx_indices->put(&zeroKeyVal, &val_h, 0);
+    if(result)
+    {
+      throw0(DB_ERROR(std::string("Failed to add tx data to db transaction: ").append(result).c_str()));
+    }
+
+    Dbt_copy<blobdata> blobVal(blob);
+    uint32_t unprunableSize = tx.unprunable_size;
+    if(unprunableSize == 0)
+    {
+      std::stringstream ss;
+      binary_archive<true> binaryArchive(ss);
+      auto r = const_cast<cryptonote::transaction&>(tx).serialize_base(binaryArchive);
+      if(!r)
+      {
+        throw0(DB_ERROR("Failed to serialize pruned tx"));
+      }
+      unprunableSize = ss.str().size();
+    }
+
+    if(unprunableSize > blob.size())
+    {
+      throw0(DB_ERROR("pruned tx size is larger than tx size"));
+    }
+
+    Dbt prunedBlob = {(void *)blob.data(), unprunableSize};
+    result = m_cur_txs_pruned->put(&val_tx_id, &prunedBlob, DB_APPEND);
+    if(result)
+    {
+      throw0(DB_ERROR(std::string("Failed to add pruned tx blob to db transaction: ").append(result).c_str()));
+    }
+
+    Dbt prunableBlob = {(void *)(blob.data() + unprunableSize), static_cast<u_int32_t>(blob.size() - unprunableSize)};
+    result = m_cur_txs_prunable->put(&val_tx_id, &prunableBlob, DB_APPEND);
+    if(result)
+    {
+      throw0(DB_ERROR(std::string("Failed to add prunable tx blob to db transaction:: ").append(result).c_str()));
+    }
+
+    if(get_blockchain_pruning_seed())
+    {
+      Dbt_copy<uint64_t> valHeight(m_height);
+      result = m_cur_txs_prunable_tip->put(&val_tx_id, &valHeight, 0);
+      if(result)
+      {
+        throw0(DB_ERROR(std::string("Failed to add prunable tx id to db transaction: ").append(result).c_str()));
+      }
+    }
+
+    if(tx.version > 1)
+    {
+      Dbt_copy<crypto::hash> valPrunableHash(tx_prunable_hash);
+      result = m_cur_txs_prunable_hash->put(&val_tx_id, &valPrunableHash, DB_APPEND);
+      if(result)
+      {
+        throw0(DB_ERROR(std::string("Failed to add prunable tx prunable hash to db transaction: ").append(result).c_str()));
+      }
+    }
+
+    // Close cursors
+    m_cur_txs_pruned->close();
+    m_cur_txs_prunable->close();
+    m_cur_txs_prunable_hash->close();
+    m_cur_txs_prunable_tip->close();
+    m_cur_tx_indices->close();
+
+    return tx_id;
+
+#if 0
     if (m_txs->put(DB_DEFAULT_TX, &val_h, &blob, 0))
         throw0(DB_ERROR("Failed to add tx blob to db transaction"));
 
@@ -435,6 +577,7 @@ void BlockchainBDB::add_transaction_data(const crypto::hash& blk_hash, const tra
     Dbt_copy<uint64_t> unlock_time(tx.unlock_time);
     if (m_tx_unlocks->put(DB_DEFAULT_TX, &val_h, &unlock_time, 0))
         throw0(DB_ERROR("Failed to add tx unlock time to db transaction"));
+#endif
 }
 
 void BlockchainBDB::remove_transaction_data(const crypto::hash& tx_hash, const transaction& tx)
@@ -1022,7 +1165,7 @@ void BlockchainBDB::open(const std::string& filename, const int db_flags)
         {
             if (result > VERSION)
             {
-                LOG_PRINT_RED_L0("Existing BerkeleyDB database was made by a later version. We don't know how it will change yet.");
+                LOG_PRINT_L0("Existing BerkeleyDB database was made by a later version. We don't know how it will change yet.");
                 compatible = false;
             }
 #if VERSION > 0
@@ -1042,8 +1185,8 @@ void BlockchainBDB::open(const std::string& filename, const int db_flags)
         if (!compatible)
         {
             m_open = false;
-            LOG_PRINT_RED_L0("Existing BerkeleyDB database is incompatible with this version.");
-            LOG_PRINT_RED_L0("Please delete the existing database and resync.");
+            LOG_PRINT_L0("Existing BerkeleyDB database is incompatible with this version.");
+            LOG_PRINT_L0("Please delete the existing database and resync.");
             return;
         }
 
@@ -1058,7 +1201,7 @@ void BlockchainBDB::open(const std::string& filename, const int db_flags)
                 if (put_result != 0)
                 {
                     m_open = false;
-                    LOG_PRINT_RED_L0("Failed to write version to database.");
+                    LOG_PRINT_L0("Failed to write version to database.");
                     return;
                 }
             }
