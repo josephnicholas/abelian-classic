@@ -485,7 +485,7 @@ uint64_t BlockchainBDB::add_transaction_data(const crypto::hash& blk_hash, const
     }
     else if (result != DB_NOTFOUND)
     {
-      throw1(DB_ERROR(std::string("Error checking if tx index exists for tx hash ").append(epee::string_tools::pod_to_hex(tx_hash) + ": " + result).c_str()));
+      throw1(DB_ERROR(std::string("Error checking if tx index exists for tx hash ").append(epee::string_tools::pod_to_hex(tx_hash) + ": " + std::to_string(result)).c_str()));
     }
 
     auto &[tx, blob] = txp;
@@ -501,7 +501,7 @@ uint64_t BlockchainBDB::add_transaction_data(const crypto::hash& blk_hash, const
     result = m_cur_tx_indices->put(&zeroKeyVal, &val_h, 0);
     if(result)
     {
-      throw0(DB_ERROR(std::string("Failed to add tx data to db transaction: ").append(result).c_str()));
+      throw0(DB_ERROR(std::string("Failed to add tx data to db transaction: ").append(std::to_string(result)).c_str()));
     }
 
     Dbt_copy<blobdata> blobVal(blob);
@@ -527,14 +527,14 @@ uint64_t BlockchainBDB::add_transaction_data(const crypto::hash& blk_hash, const
     result = m_cur_txs_pruned->put(&val_tx_id, &prunedBlob, DB_APPEND);
     if(result)
     {
-      throw0(DB_ERROR(std::string("Failed to add pruned tx blob to db transaction: ").append(result).c_str()));
+      throw0(DB_ERROR(std::string("Failed to add pruned tx blob to db transaction: ").append(std::to_string(result)).c_str()));
     }
 
     Dbt prunableBlob = {(void *)(blob.data() + unprunableSize), static_cast<u_int32_t>(blob.size() - unprunableSize)};
     result = m_cur_txs_prunable->put(&val_tx_id, &prunableBlob, DB_APPEND);
     if(result)
     {
-      throw0(DB_ERROR(std::string("Failed to add prunable tx blob to db transaction:: ").append(result).c_str()));
+      throw0(DB_ERROR(std::string("Failed to add prunable tx blob to db transaction:: ").append(std::to_string(result)).c_str()));
     }
 
     if(get_blockchain_pruning_seed())
@@ -543,7 +543,7 @@ uint64_t BlockchainBDB::add_transaction_data(const crypto::hash& blk_hash, const
       result = m_cur_txs_prunable_tip->put(&val_tx_id, &valHeight, 0);
       if(result)
       {
-        throw0(DB_ERROR(std::string("Failed to add prunable tx id to db transaction: ").append(result).c_str()));
+        throw0(DB_ERROR(std::string("Failed to add prunable tx id to db transaction: ").append(std::to_string(result)).c_str()));
       }
     }
 
@@ -553,7 +553,7 @@ uint64_t BlockchainBDB::add_transaction_data(const crypto::hash& blk_hash, const
       result = m_cur_txs_prunable_hash->put(&val_tx_id, &valPrunableHash, DB_APPEND);
       if(result)
       {
-        throw0(DB_ERROR(std::string("Failed to add prunable tx prunable hash to db transaction: ").append(result).c_str()));
+        throw0(DB_ERROR(std::string("Failed to add prunable tx prunable hash to db transaction: ").append(std::to_string(result)).c_str()));
       }
     }
 
@@ -1029,7 +1029,6 @@ void BlockchainBDB::open(const std::string& filename, const int db_flags)
 
     try
     {
-
         //Create BerkeleyDB environment
         m_env = new DbEnv(0);  // no flags needed for DbEnv
 

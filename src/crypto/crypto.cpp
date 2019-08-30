@@ -560,7 +560,7 @@ POP_WARNINGS
 
     LOG_PRINT_L1("ring size: " << pubs_count << " transaction size: " << hash_len << " transaction hash: " << prefix_hash);
 
-    unsigned char (*Ring)[SIZE_DPK];
+    uint8_t (*Ring)[SIZE_DPK];
     memcpy(&Ring, derived_pubs, sizeof((uint8_t *)derived_pubs));
 
     std::array<char, 4712> signatures{};
