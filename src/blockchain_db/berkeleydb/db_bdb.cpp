@@ -46,6 +46,16 @@ using epee::string_tools::pod_to_hex;
 namespace
 {
 
+#pragma pack(push, 1)
+// This MUST be identical to output_data_t, without the extra rct data at the end
+struct pre_rct_output_data_t
+{
+  crypto::derived_public_key  pubkey;       //!< the output's public key (for spend verification)
+  uint64_t                    unlock_time;  //!< the output's unlock time (or height)
+  uint64_t                    height;       //!< the height of the block which created the output
+};
+#pragma pack(pop)
+
 template <typename T>
 inline void throw0(const T &e)
 {
@@ -254,6 +264,24 @@ typedef struct bdb_block_info_4
   uint64_t bi_cum_rct;
   uint64_t bi_long_term_block_weight;
 } bdb_block_info_4;
+
+typedef struct pre_rct_outkey {
+  uint64_t amount_index;
+  uint64_t output_id;
+  pre_rct_output_data_t data;
+} pre_rct_outkey;
+
+typedef struct outkey {
+  uint64_t amount_index;
+  uint64_t output_id;
+  output_data_t data;
+} outkey;
+
+typedef struct outtx {
+  uint64_t output_id;
+  crypto::hash tx_hash;
+  uint64_t local_index;
+} outtx;
 
 typedef bdb_block_info_4 bdb_block_info;
 
@@ -584,7 +612,113 @@ void BlockchainBDB::remove_transaction_data(const crypto::hash& tx_hash, const t
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
+    bdb_txn_cursors *m_cursors = &m_wcursors;
 
+    auto result = 0;
+    // Open cursors
+    m_txs_pruned->cursor(DB_DEFAULT_TX, &m_cur_txs_pruned, 0);
+    m_txs_prunable->cursor(DB_DEFAULT_TX, &m_cur_txs_prunable, 0);
+    m_txs_prunable_hash->cursor(DB_DEFAULT_TX, &m_cur_txs_prunable_hash, 0);
+    m_txs_prunable_tip->cursor(DB_DEFAULT_TX, &m_cur_txs_prunable_tip, 0);
+    m_txs_indices->cursor(DB_DEFAULT_TX, &m_cur_tx_indices, 0);
+    m_tx_outputs->cursor(DB_DEFAULT_TX, &m_cur_tx_outputs, 0);
+
+    Dbt_copy<crypto::hash> val_h(tx_hash);
+    result = m_cur_tx_indices->get(&zeroKeyVal, &val_h, DB_GET_BOTH);
+    if(result)
+    {
+      throw1(TX_DNE("Attempting to remove transaction that isn't in the db"));
+    }
+    auto *tip = (txindex *)val_h.get_data();
+    Dbt_copy<uint64_t> val_tx_id(tip->data.tx_id);
+
+    result = m_cur_txs_pruned->get(&val_tx_id, nullptr, DB_SET);
+    if(result)
+    {
+      throw1(DB_ERROR(std::string("Failed to locate pruned tx for removal: ").append(std::to_string(result)).c_str()));
+    }
+    result = m_cur_txs_pruned->del(0);
+    if(result)
+    {
+      throw1(DB_ERROR(std::string("Failed to add removal of pruned tx to db transaction: ").append(std::to_string(result)).c_str()));
+    }
+
+    result = m_cur_txs_prunable->get(&val_tx_id, nullptr, DB_SET);
+    if(result == 0)
+    {
+      result = m_cur_txs_prunable->del(0);
+      throw1(DB_ERROR(std::string("Failed to add removal of prunable tx to db transaction: ").append(std::to_string(result)).c_str()));
+    }
+    else if(result != DB_NOTFOUND)
+    {
+      throw1(DB_ERROR(std::string("Failed to locate prunable tx for removal: ").append(std::to_string(result)).c_str()));
+    }
+
+    result = m_cur_txs_prunable_tip->get(&val_tx_id, nullptr, DB_SET);
+    if(result && result != DB_NOTFOUND)
+    {
+      throw1(DB_ERROR(std::string("Failed to locate tx id for removal: ").append(std::to_string(result)).c_str()));
+    }
+    if(result == 0)
+    {
+      result = m_cur_txs_prunable_tip->del(0);
+      if(result)
+      {
+        throw1(DB_ERROR(std::string("Error adding removal of tx id to db transaction").append(std::to_string(result)).c_str()));
+      }
+    }
+
+    if(tx.version > 1)
+    {
+      result = m_cur_txs_prunable_hash->get(&val_tx_id, nullptr, DB_SET);
+      if(result)
+      {
+        throw1(DB_ERROR(std::string("Failed to locate prunable hash tx for removal: ").append(std::to_string(result)).c_str()));
+      }
+      result = m_cur_txs_prunable_hash->del(0);
+      if(result)
+      {
+        throw1(DB_ERROR(std::string("Failed to add removal of prunable hash tx to db transaction: ").append(std::to_string(result)).c_str()));
+      }
+    }
+
+    remove_tx_outputs(tip->data.tx_id, tx);
+
+    result = m_cur_tx_outputs->get(&val_tx_id, nullptr, DB_SET);
+    if(result == DB_NOTFOUND)
+    {
+      LOG_PRINT_L1("TX has no outputs to remove: "<< tx_hash);
+    }
+    else if(result)
+    {
+      throw1(DB_ERROR(std::string("Failed to locate tx outputs for removal:  ").append(std::to_string(result)).c_str()));
+    }
+
+    if(!result)
+    {
+      result = m_cur_tx_outputs->del(0);
+      if(result)
+      {
+        throw1(DB_ERROR(std::string("Failed to add removal of tx outputs to db transaction: ").append(std::to_string(result)).c_str()));
+      }
+    }
+
+    // Don't delete the tx_indices entry until the end, after we're done with val_tx_id
+    result = m_cur_tx_indices->del(0);
+    if(result)
+    {
+      throw1(DB_ERROR("Failed to add removal of tx index to db transaction"));
+    }
+
+    // Close cursors
+    m_cur_txs_pruned->close();
+    m_cur_txs_prunable->close();
+    m_cur_txs_prunable_hash->close();
+    m_cur_txs_prunable_tip->close();
+    m_cur_tx_indices->close();
+    m_cur_tx_outputs->close();
+
+#if 0
     Dbt_copy<crypto::hash> val_h(tx_hash);
     if (m_txs->exists(DB_DEFAULT_TX, &val_h, 0))
         throw1(TX_DNE("Attempting to remove transaction that isn't in the db"));
@@ -603,13 +737,100 @@ void BlockchainBDB::remove_transaction_data(const crypto::hash& tx_hash, const t
         LOG_PRINT_L1("tx has no outputs to remove: " << tx_hash);
     else if (result)
         throw1(DB_ERROR("Failed to add removal of tx outputs to db transaction"));
+#endif
 }
 
-void BlockchainBDB::add_output(const crypto::hash& tx_hash, const tx_out& tx_output, const uint64_t& local_index, const uint64_t unlock_time, const rct::key *commitment)
+uint64_t BlockchainBDB::add_output(const crypto::hash& tx_hash,
+    const tx_out& tx_output,
+    const uint64_t& local_index,
+    const uint64_t unlock_time,
+    const rct::key *commitment)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
 
+    bdb_txn_cursors *m_cursors = &m_wcursors;
+    auto numOutputs = num_outputs();
+
+    auto result = 0;
+
+    //Open cursors
+    m_output_amounts->cursor(DB_DEFAULT_TX, &m_cur_output_amounts, 0);
+    m_output_txs->cursor(DB_DEFAULT_TX, &m_cur_output_txs, 0);
+
+    if(tx_output.target.type() != typeid(txout_to_key))
+    {
+      throw0(DB_ERROR("Wrong output type: expected txout_to_key"));
+    }
+    if (tx_output.amount == 0 && !commitment)
+    {
+      throw0(DB_ERROR("RCT output without commitment"));
+    }
+
+    outtx outTx = {
+        m_num_outputs,
+        tx_hash,
+        local_index
+    };
+
+    Dbt_copy<outtx> valOutTx(outTx);
+
+    result = m_cur_output_txs->get(&zeroKeyVal, &valOutTx, DB_APPEND);
+    if(result)
+    {
+      throw0(DB_ERROR(std::string("Failed to add output tx hash to db transaction: ").append(std::to_string(result)).c_str()));
+    }
+
+    outkey outputKey;
+    Dbt data;
+    Dbt_copy<uint64_t> valAmount(tx_output.amount);
+    result = m_cur_output_amounts->get(&valAmount, &data, DB_SET);
+    if(!result)
+    {
+      db_recno_t numElems = 0;
+      result = m_cur_output_amounts->count(&numElems, 0);
+      if(result)
+      {
+        throw0(DB_ERROR(std::string("Failed to get number of outputs for amount: ").append(db_strerror(result)).c_str()));
+      }
+      outputKey.amount_index = numElems;
+    }
+    else if(result != DB_NOTFOUND)
+    {
+      throw0(DB_ERROR(std::string("Failed to get output amount in db transaction: ", result).c_str()));
+    }
+    else
+    {
+      outputKey.amount_index = 0;
+    }
+    outputKey.output_id = m_num_outputs;
+    outputKey.data.pubkey = boost::get<txout_to_key>(tx_output.target).key;
+    outputKey.data.unlock_time = unlock_time;
+    outputKey.data.height = m_height;
+    if(tx_output.amount == 0)
+    {
+      outputKey.data.commitment = *commitment;
+      data.set_size(sizeof(outputKey));
+    }
+    else
+    {
+      data.set_size(sizeof(pre_rct_outkey));
+    }
+    data.set_data(&outputKey);
+
+    result = m_cur_output_amounts->put(&valAmount, &data, DB_APPEND);
+    if(result)
+    {
+      throw0(DB_ERROR(std::string("Failed to add output pubkey to db transaction: ", result).c_str()));
+    }
+
+    //Close cursors
+    m_cur_output_txs->close();
+    m_cur_output_amounts->close();
+
+    return outputKey.amount_index;
+
+#if 0
     Dbt_copy<uint32_t> k(m_num_outputs + 1);
     Dbt_copy<crypto::hash> v(tx_hash);
 
@@ -643,12 +864,35 @@ void BlockchainBDB::add_output(const crypto::hash& tx_hash, const tx_out& tx_out
     }
 
     m_num_outputs++;
+#endif
 }
 
-void BlockchainBDB::remove_tx_outputs(const crypto::hash& tx_hash, const transaction& tx)
+void BlockchainBDB::remove_tx_outputs(const uint64_t &tx_id, const transaction& tx)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
+    auto amountIndicesSet = get_tx_amount_output_indices(tx_id, 1);
+    const auto &amountOutputIndices = amountIndicesSet.front();
 
+    if(amountOutputIndices.empty())
+    {
+      if (tx.vout.empty())
+      {
+        LOG_PRINT_L2("tx has no outputs, so no output indices");
+      }
+      else
+      {
+        throw0(DB_ERROR("tx has outputs, but no output indices found"));
+      }
+    }
+
+    auto isPseudoRCT = tx.version > 2 && tx.vin.size() == 1 && tx.vin[0].type() == typeid(txin_gen);
+    for (size_t i = tx.vout.size(); i-- > 0;)
+    {
+      uint64_t amount = isPseudoRCT ? 0 : tx.vout[i].amount;
+      remove_output(amount, amountOutputIndices[i]);
+    }
+
+#if 0
     bdb_cur cur(DB_DEFAULT_TX, m_tx_outputs);
 
     Dbt_copy<crypto::hash> k(tx_hash);
@@ -690,16 +934,10 @@ void BlockchainBDB::remove_tx_outputs(const crypto::hash& tx_hash, const transac
     }
 
     cur.close();
+#endif
 }
 
-// TODO: probably remove this function
-void BlockchainBDB::remove_output(const tx_out& tx_output)
-{
-    LOG_PRINT_L3("BlockchainBDB::" << __func__ << " (unused version - does nothing)");
-    return;
-}
-
-void BlockchainBDB::remove_output(const uint64_t& out_index, const uint64_t amount)
+void BlockchainBDB::remove_output(const uint64_t &amount, const uint64_t& out_index)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
