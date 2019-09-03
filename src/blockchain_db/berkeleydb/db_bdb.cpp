@@ -803,7 +803,7 @@ uint64_t BlockchainBDB::add_output(const crypto::hash& tx_hash,
     {
       outputKey.amount_index = 0;
     }
-    outputKey.output_id = m_num_outputs;
+    outputKey.output_id = numOutputs;
     outputKey.data.pubkey = boost::get<txout_to_key>(tx_output.target).key;
     outputKey.data.unlock_time = unlock_time;
     outputKey.data.height = m_height;
@@ -941,9 +941,54 @@ void BlockchainBDB::remove_output(const uint64_t &amount, const uint64_t& out_in
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
+    bdb_txn_cursors *m_cursors = &m_wcursors;
 
-    Dbt_copy<uint32_t> k(out_index);
+    auto result = 0;
+    //Open cursors
+    m_output_amounts->cursor(DB_DEFAULT_TX, &m_cur_output_amounts, 0);
+    m_output_txs->cursor(DB_DEFAULT_TX, &m_cur_output_txs, 0);
 
+    Dbt_copy<uint64_t> key(amount);
+    Dbt_copy<uint64_t> value(out_index);
+
+    result = m_cur_output_amounts->get(&key, &value, DB_GET_BOTH);
+    if(result == DB_NOTFOUND)
+    {
+      throw1(OUTPUT_DNE("Attempting to get an output index by amount and amount index, but amount not found"));
+    }
+    else if(result)
+    {
+      throw0(DB_ERROR(std::string("DB error attempting to get an output", result).c_str()));
+    }
+
+    const auto *outputKey = (const pre_rct_outkey *)value.get_data();
+    Dbt_copy<uint64_t> outTxKey(outputKey->output_id);
+    result = m_cur_output_txs->get(&zeroKeyVal, &outTxKey, DB_GET_BOTH);
+    if(result == DB_NOTFOUND)
+    {
+      throw0(DB_ERROR("Unexpected: global output index not found in m_output_txs"));
+    }
+    else if(result)
+    {
+      throw1(DB_ERROR(std::string("Error adding removal of output tx to db transaction", result).c_str()));
+    }
+    result = m_cur_output_txs->del(0);
+    if(result)
+    {
+      throw0(DB_ERROR(std::string(std::string("Error deleting output index ").append(std::to_string(out_index).append(": ")).c_str(), result).c_str()));
+    }
+
+    // now delete the amount
+    result = m_cur_output_amounts->del(0);
+    if(result)
+    {
+      throw0(DB_ERROR(std::string(std::string("Error deleting amount for output index ").append(std::to_string(out_index).append(": ")).c_str(), result).c_str()));
+    }
+
+    //Close cursors
+    m_cur_output_txs->close();
+    m_cur_output_amounts->close();
+#if 0
     auto result = m_output_indices->del(DB_DEFAULT_TX, &k, 0);
     if (result == DB_NOTFOUND)
     {
@@ -977,6 +1022,7 @@ void BlockchainBDB::remove_output(const uint64_t &amount, const uint64_t& out_in
     remove_amount_output_index(amount, out_index);
 
     m_num_outputs--;
+#endif
 }
 
 void BlockchainBDB::remove_amount_output_index(const uint64_t amount, const uint64_t global_output_index)
@@ -1055,7 +1101,29 @@ void BlockchainBDB::add_spent_key(const crypto::key_image& k_image)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
+    bdb_txn_cursors *m_cursors = &m_wcursors;
 
+    //Open cursor
+    m_spent_keys->cursor(DB_DEFAULT_TX, &m_cur_spent_keys, 0);
+
+    Dbt key = {(void *)&k_image, sizeof(k_image)};
+    auto result = m_cur_spent_keys->put(&zeroKeyVal, &key, DB_NODUPDATA);
+
+    if(result)
+    {
+      if(result == DB_KEYEXIST)
+      {
+        throw1(KEY_IMAGE_EXISTS("Attempting to add spent key image that's already in the db"));
+      }
+      else
+      {
+        throw1(DB_ERROR(std::string("Error adding spent key image to db transaction: ", result).c_str()));
+      }
+    }
+
+    // Close cursor
+    m_cur_spent_keys->close();
+#if 0
     Dbt_copy<crypto::key_image> val_key(k_image);
     if (m_spent_keys->exists(DB_DEFAULT_TX, &val_key, 0) == 0)
         throw1(KEY_IMAGE_EXISTS("Attempting to add spent key image that's already in the db"));
@@ -1063,17 +1131,41 @@ void BlockchainBDB::add_spent_key(const crypto::key_image& k_image)
     Dbt_copy<char> val('\0');
     if (m_spent_keys->put(DB_DEFAULT_TX, &val_key, &val, 0))
         throw1(DB_ERROR("Error adding spent key image to db transaction."));
+#endif
 }
 
 void BlockchainBDB::remove_spent_key(const crypto::key_image& k_image)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
+    bdb_txn_cursors *m_cursors = &m_wcursors;
 
+    //Open cursor
+    m_spent_keys->cursor(DB_DEFAULT_TX, &m_cur_spent_keys, 0);
+
+    Dbt key = {(void *)&k_image, sizeof(k_image)};
+    auto result = m_cur_spent_keys->get(&zeroKeyVal, &key, DB_GET_BOTH);
+    if(result != 0 && result != DB_NOTFOUND)
+    {
+      throw1(DB_ERROR(std::string("Error finding spent key to remove", result).c_str()));
+    }
+    if(!result)
+    {
+      result = m_cur_spent_keys->del(0);
+      if(result)
+      {
+        throw1(DB_ERROR(std::string("Error adding removal of key image to db transaction", result).c_str()));
+      }
+    }
+
+    // Close cursor
+    m_cur_spent_keys->close();
+#if 0
     Dbt_copy<crypto::key_image> k(k_image);
     auto result = m_spent_keys->del(DB_DEFAULT_TX, &k, 0);
     if (result != 0 && result != DB_NOTFOUND)
         throw1(DB_ERROR("Error adding removal of key image to db transaction"));
+#endif
 }
 
 bool BlockchainBDB::for_all_key_images(std::function<bool(const crypto::key_image&)> f) const
@@ -1081,6 +1173,44 @@ bool BlockchainBDB::for_all_key_images(std::function<bool(const crypto::key_imag
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
 
+    /** LMDB has transaction read only processing
+     * which probably have some differenc in BDB
+     * It also has renew cursor for effeciency.
+     *
+     * Look into implementing it here after migration.
+     **/
+    //Open cursor - Read-only
+    bdb_cur curSpentKeys(DB_DEFAULT_TX, m_spent_keys);
+
+    Dbt key, value;
+    auto fRet = true;
+
+    key = zeroKeyVal;
+    auto dbOp = DB_FIRST;
+    while(1)
+    {
+      auto ret = curSpentKeys->get(&key, &value, dbOp);
+      dbOp = DB_NEXT;
+      if(ret == DB_NOTFOUND)
+      {
+        break;
+      }
+      if(ret < 0)
+      {
+        throw0(DB_ERROR("Failed to enumerate key images"));
+      }
+      auto kImage = *(const crypto::key_image *)value.get_data();
+      if(!f(kImage))
+      {
+        fRet = false;
+        break;
+      }
+    }
+
+    curSpentKeys.close();
+
+    return fRet;
+#if 0
     bdb_cur cur(DB_DEFAULT_TX, m_spent_keys);
 
     Dbt_copy<crypto::key_image> k;
@@ -1100,18 +1230,75 @@ bool BlockchainBDB::for_all_key_images(std::function<bool(const crypto::key_imag
 
     cur.close();
     return ret;
+#endif
 }
 
-bool BlockchainBDB::for_all_blocks(std::function<bool(uint64_t, const crypto::hash&, const cryptonote::block&)> f) const
+bool BlockchainBDB::for_blocks_range(const uint64_t& h1, const uint64_t& h2,
+                                    std::function<bool(uint64_t, const crypto::hash&, const cryptonote::block&)> f) const
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
 
-    bdb_cur cur(DB_DEFAULT_TX, m_blocks);
+    /**
+    * LMDB has transaction read only processing
+    * which probably have some differenc in BDB
+    * It also has renew cursor for effeciency.
+    *
+    * Look into implementing it here after migration.
+    **/
+    bdb_cur curBlocks(DB_DEFAULT_TX, m_blocks);
 
-    Dbt_copy<uint32_t> k;
+    Dbt_copy<uint64_t > k;
     Dbt_safe v;
-    bool ret = true;
+    bool fRet = true;
+
+    auto curOperation = 0;
+    if(h1)
+    {
+      k = h1;
+      curOperation = DB_SET;
+    }
+    else
+    {
+      curOperation = DB_FIRST;
+    }
+
+    while(1)
+    {
+      auto ret = curBlocks->get(&k, &v, curOperation);
+      curOperation = DB_NEXT;
+      if(ret == DB_NOTFOUND)
+      {
+        throw0(DB_ERROR("Failed to enumerate blocks"));
+      }
+      auto height = *static_cast<uint64_t *>(k.get_data());
+      blobdata blobD;
+      blobD.assign(reinterpret_cast<char *>(v.get_data()), v.get_size());
+      block blk;
+      if(!parse_and_validate_block_from_blob(blobD, blk))
+      {
+        throw0(DB_ERROR("Failed to parse block from blob retrieved from the db"));
+      }
+      crypto::hash hash;
+      if(!get_block_hash(blk, hash))
+      {
+        throw0(DB_ERROR("Failed to get block hash from blob retrieved from the db"));
+      }
+      if(!f(height, hash, blk))
+      {
+        fRet = false;
+        break;
+      }
+      if(height >= h2)
+      {
+        break;
+      }
+    }
+
+    curBlocks.close();
+
+    return fRet;
+#if 0
     int result;
     while ((result = cur->get(&k, &v, DB_NEXT)) == 0)
     {
@@ -1135,6 +1322,7 @@ bool BlockchainBDB::for_all_blocks(std::function<bool(uint64_t, const crypto::ha
 
     cur.close();
     return ret;
+#endif
 }
 
 bool BlockchainBDB::for_all_transactions(std::function<bool(const crypto::hash&, const cryptonote::transaction&)> f, bool pruned) const
@@ -1142,11 +1330,85 @@ bool BlockchainBDB::for_all_transactions(std::function<bool(const crypto::hash&,
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
 
-    bdb_cur cur(DB_DEFAULT_TX, m_txs);
+      /**
+    * LMDB has transaction read only processing
+    * which probably have some differenc in BDB
+    * It also has renew cursor for effeciency.
+    *
+    * Look into implementing it here after migration.
+    **/
 
-    Dbt_copy<crypto::hash> k;
+    bdb_cur curTxsPruned(DB_DEFAULT_TX, m_txs_pruned);
+    bdb_cur curTxsPrunable(DB_DEFAULT_TX, m_txs_prunable);
+    bdb_cur curTxsIndices(DB_DEFAULT_TX, m_txs_indices);
+
+    Dbt_safe k;
     Dbt_safe v;
-    bool ret = true;
+    bool fRet = true;
+
+    auto curOperations = DB_FIRST;
+    while(1)
+    {
+      auto ret = curTxsIndices->get(&k, &v, curOperations);
+      curOperations = DB_NEXT;
+      if(ret == DB_NOTFOUND)
+      {
+        break;
+      }
+      if(ret)
+      {
+        throw0(DB_ERROR(std::string("Failed to enumerate transactions: ", ret).c_str()));
+      }
+
+      auto *txIndex = (txindex *)v.get_data();
+      const auto hash = txIndex->key;
+      k.set_data((void *)&txIndex->data.tx_id);
+      k.set_size(sizeof(txIndex->data.tx_id));
+
+      ret = curTxsPruned->get(&k, &v, DB_SET);
+      if(ret == DB_NOTFOUND)
+      {
+        break;
+      }
+      if(ret)
+      {
+        throw0(DB_ERROR(std::string("Failed to enumerate transactions: ", ret).c_str()));
+      }
+      transaction tx;
+      blobdata blobData;
+      blobData.assign(reinterpret_cast<char *>(v.get_data(), v.get_size()));
+      if(pruned)
+      {
+        if(!parse_and_validate_tx_base_from_blob(blobData, tx))
+        {
+          throw0(DB_ERROR("Failed to parse tx from blob retrieved from the db"));
+        }
+      }
+      else
+      {
+        ret = curTxsPrunable->get(&k, &v, DB_SET);
+        if(ret)
+        {
+          throw0(DB_ERROR(std::string("Failed to get prunable tx data the db: ", ret).c_str()));
+        }
+        blobData.append(reinterpret_cast<char *>(v.get_data(), v.get_size()));
+        if(!parse_and_validate_tx_from_blob(blobData, tx))
+        {
+          throw0(DB_ERROR("Failed to parse tx from blob retrieved from the db"));
+        }
+      }
+      if(!f(hash, tx))
+      {
+        fRet = false;
+        break;
+      }
+    }
+
+    curTxsIndices.close();
+    curTxsPrunable.close();
+    curTxsPruned.close();
+    return fRet;
+#if 0
     int result;
     while ((result = cur->get(&k, &v, DB_NEXT)) == 0)
     {
@@ -1165,19 +1427,55 @@ bool BlockchainBDB::for_all_transactions(std::function<bool(const crypto::hash&,
       ret = false;
 
     cur.close();
-    return ret;
+#endif
 }
 
-bool BlockchainBDB::for_all_outputs(std::function<bool(uint64_t amount, const crypto::hash &tx_hash, size_t tx_idx)> f) const
+bool BlockchainBDB::for_all_outputs(std::function<bool(uint64_t amount, const crypto::hash &tx_hash, uint64_t height, size_t tx_idx)> f) const
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
 
-    bdb_cur cur(DB_DEFAULT_TX, m_output_amounts);
+      /**
+    * LMDB has transaction read only processing
+    * which probably have some differenc in BDB
+    * It also has renew cursor for effeciency.
+    *
+    * Look into implementing it here after migration.
+    **/
+    bdb_cur curOutputAmounts(DB_DEFAULT_TX, m_output_amounts);
 
-    Dbt_copy<uint64_t> k;
-    Dbt_copy<uint32_t> v;
-    bool ret = true;
+    Dbt_safe k;
+    Dbt_safe v;
+    bool fRet = true;
+
+    auto curOperations = DB_FIRST;
+    while(1)
+    {
+      auto ret = curOutputAmounts->get(&k, &v, curOperations);
+      curOperations = DB_NEXT;
+      if (ret == DB_NOTFOUND)
+      {
+        break;
+      }
+      if(ret)
+      {
+        throw0(DB_ERROR("Failed to enumerate outputs"));
+      }
+      auto amount = *static_cast<uint64_t  *>(k.get_data());
+      auto *outputKey = static_cast<outkey *>(v.get_data());
+      auto txOutIndex = get_output_tx_and_index_from_global(outputKey->output_id);
+
+      if(!f(amount, txOutIndex.first, outputKey->data.height, txOutIndex.second))
+      {
+        fRet = false;
+        break;
+      }
+    }
+
+    curOutputAmounts.close();
+
+    return fRet;
+#if 0
     int result;
     while ((result = cur->get(&k, &v, DB_NEXT)) == 0)
     {
@@ -1193,7 +1491,7 @@ bool BlockchainBDB::for_all_outputs(std::function<bool(uint64_t amount, const cr
       ret = false;
 
     cur.close();
-    return ret;
+#endif
 }
 
 uint64_t BlockchainBDB::get_output_global_index(const uint64_t& amount, const uint64_t& index)
