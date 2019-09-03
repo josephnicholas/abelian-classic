@@ -376,6 +376,8 @@ public:
   void block_rtxn_stop() const override;
   void block_rtxn_abort() const override;
 
+  bool block_rtxn_start(DbTxn **mtxn, Dbc **mcur) const;
+
   void pop_block(block& blk, std::vector<transaction>& txs) override;
 
 #if defined(BDB_BULK_CAN_THREAD)

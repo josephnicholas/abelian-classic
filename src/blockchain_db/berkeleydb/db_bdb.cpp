@@ -1494,6 +1494,57 @@ bool BlockchainBDB::for_all_outputs(std::function<bool(uint64_t amount, const cr
 #endif
 }
 
+bool BlockchainBDB::for_all_outputs(uint64_t amount, const std::function<bool(uint64_t height)> &f) const
+{
+  LOG_PRINT_L3("BlockchainBDB::" << __func__);
+  check_open();
+
+  /**
+    * LMDB has transaction read only processing
+    * which probably have some differenc in BDB
+    * It also has renew cursor for effeciency.
+    *
+    * Look into implementing it here after migration.
+    **/
+  bdb_cur curOutputAmounts(DB_DEFAULT_TX, m_output_amounts);
+
+  Dbt_copy<uint64_t> k(amount);
+  Dbt_safe v;
+  bool fRet = true;
+
+  auto curOperations = DB_SET;
+  while(1)
+  {
+    auto ret = curOutputAmounts->get(&k, &v, curOperations);
+    curOperations = DB_NEXT_DUP;
+    if(ret == DB_NOTFOUND)
+    {
+      break;
+    }
+    if(ret)
+    {
+      throw0(DB_ERROR("Failed to enumerate outputs"));
+    }
+    auto outputAmount = *static_cast<const uint64_t *>(k.get_data());
+    if(amount != outputAmount)
+    {
+      MERROR("Amount is not the expected amount");
+      fRet = false;
+      break;
+    }
+    const auto *outputKey = static_cast<const outkey *>(v.get_data());
+    if(!f(outputKey->data.height))
+    {
+      fRet = false;
+      break;
+    }
+  }
+
+  curOutputAmounts.close();
+
+  return fRet;
+}
+
 uint64_t BlockchainBDB::get_output_global_index(const uint64_t& amount, const uint64_t& index)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
@@ -2544,7 +2595,7 @@ bool BlockchainBDB::has_key_image(const crypto::key_image& img) const
 // Ostensibly BerkeleyDB has batch transaction support built-in,
 // so the following few functions will be NOP.
 
-bool BlockchainBDB::batch_start(uint64_t batch_num_blocks)
+bool BlockchainBDB::batch_start(uint64_t batch_num_blocks, uint64_t batch_bytes)
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     return false;
@@ -2572,9 +2623,10 @@ void BlockchainBDB::set_batch_transactions(bool batch_transactions)
     LOG_PRINT_L3("batch transactions " << (m_batch_transactions ? "enabled" : "disabled"));
 }
 
-void BlockchainBDB::block_txn_start(bool readonly)
+bool BlockchainBDB::block_rtxn_start(DbTxn **mtxn, Dbc **mcur) const
 {
-  // TODO
+  auto ret = false;
+  return ret;
 }
 
 void BlockchainBDB::block_txn_stop()
