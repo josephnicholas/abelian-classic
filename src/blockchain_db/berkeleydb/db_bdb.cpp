@@ -30,6 +30,7 @@
 #include <boost/filesystem.hpp>
 #include <cstring> // memcpy
 #include <memory>  // std::unique_ptr
+#include <ringct/rctOps.h>
 #include <string_tools.h>
 
 #include "crypto/crypto.h"
@@ -1263,7 +1264,7 @@ bool BlockchainBDB::for_blocks_range(const uint64_t& h1, const uint64_t& h2,
       curOperation = DB_FIRST;
     }
 
-    while(1)
+    while(true)
     {
       auto ret = curBlocks->get(&k, &v, curOperation);
       curOperation = DB_NEXT;
@@ -1347,7 +1348,7 @@ bool BlockchainBDB::for_all_transactions(std::function<bool(const crypto::hash&,
     bool fRet = true;
 
     auto curOperations = DB_FIRST;
-    while(1)
+    while(true)
     {
       auto ret = curTxsIndices->get(&k, &v, curOperations);
       curOperations = DB_NEXT;
@@ -1449,7 +1450,7 @@ bool BlockchainBDB::for_all_outputs(std::function<bool(uint64_t amount, const cr
     bool fRet = true;
 
     auto curOperations = DB_FIRST;
-    while(1)
+    while(true)
     {
       auto ret = curOutputAmounts->get(&k, &v, curOperations);
       curOperations = DB_NEXT;
@@ -1513,7 +1514,7 @@ bool BlockchainBDB::for_all_outputs(uint64_t amount, const std::function<bool(ui
   bool fRet = true;
 
   auto curOperations = DB_SET;
-  while(1)
+  while(true)
   {
     auto ret = curOutputAmounts->get(&k, &v, curOperations);
     curOperations = DB_NEXT_DUP;
@@ -2020,7 +2021,7 @@ std::vector<std::string> BlockchainBDB::get_filenames() const
     return full_paths;
 }
 
-bool BlockchainBDB::remove_data_file(const std::string& folder)
+bool BlockchainBDB::remove_data_file(const std::string& folder) const
 {
     return true;
 }
@@ -2069,14 +2070,6 @@ bool BlockchainBDB::block_exists(const crypto::hash& h, uint64_t *height) const
     return true;
 }
 
-block BlockchainBDB::get_block(const crypto::hash& h) const
-{
-    LOG_PRINT_L3("BlockchainBDB::" << __func__);
-    check_open();
-
-    return get_block_from_height(get_block_height(h));
-}
-
 uint64_t BlockchainBDB::get_block_height(const crypto::hash& h) const
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
@@ -2101,31 +2094,6 @@ block_header BlockchainBDB::get_block_header(const crypto::hash& h) const
 
     // block_header object is automatically cast from block object
     return get_block(h);
-}
-
-block BlockchainBDB::get_block_from_height(const uint64_t& height) const
-{
-    LOG_PRINT_L3("BlockchainBDB::" << __func__);
-    check_open();
-
-    Dbt_copy<uint32_t> key(height + 1);
-    Dbt_safe result;
-    auto get_result = m_blocks->get(DB_DEFAULT_TX, &key, &result, 0);
-    if (get_result == DB_NOTFOUND)
-    {
-        throw0(BLOCK_DNE(std::string("Attempt to get block from height ").append(boost::lexical_cast<std::string>(height)).append(" failed -- block not in db").c_str()));
-    }
-    else if (get_result)
-        throw0(DB_ERROR("Error attempting to retrieve a block from the db"));
-
-    blobdata bd;
-    bd.assign(reinterpret_cast<char*>(result.get_data()), result.get_size());
-
-    block b;
-    if (!parse_and_validate_block_from_blob(bd, b))
-        throw0(DB_ERROR("Failed to parse block from blob retrieved from the db"));
-
-    return b;
 }
 
 uint64_t BlockchainBDB::get_block_timestamp(const uint64_t& height) const
@@ -2277,18 +2245,6 @@ std::vector<crypto::hash> BlockchainBDB::get_hashes_range(const uint64_t& h1, co
     return v;
 }
 
-crypto::hash BlockchainBDB::top_block_hash() const
-{
-    LOG_PRINT_L3("BlockchainBDB::" << __func__);
-    check_open();
-    if (m_height > 0)
-    {
-        return get_block_hash_from_height(m_height - 1);
-    }
-
-    return null_hash;
-}
-
 block BlockchainBDB::get_top_block() const
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
@@ -2348,10 +2304,31 @@ uint64_t BlockchainBDB::get_tx_unlock_time(const crypto::hash& h) const
 
     return result;
 }
+bool BlockchainBDB::get_tx(const crypto::hash &h, cryptonote::transaction &tx) const
+{
+  blobdata bd;
+  if (!get_tx_blob(h, bd))
+  {
+    return false;
+  }
+  if (!parse_and_validate_tx_from_blob(bd, tx))
+  {
+    throw DB_ERROR("Failed to parse transaction from blob retrieved from the db");
+  }
+  return true;
+}
 
 transaction BlockchainBDB::get_tx(const crypto::hash& h) const
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
+    transaction tx;
+    if (!get_tx(h, tx))
+    {
+      throw TX_DNE(std::string("tx with hash ").append(epee::string_tools::pod_to_hex(h)).append(" not found in db").c_str());
+    }
+
+    return tx;
+#if 0
     check_open();
 
     Dbt_copy<crypto::hash> key(h);
@@ -2368,6 +2345,7 @@ transaction BlockchainBDB::get_tx(const crypto::hash& h) const
     transaction tx;
     if (!parse_and_validate_tx_from_blob(bd, tx))
         throw0(DB_ERROR("Failed to parse tx from blob retrieved from the db"));
+#endif
 
     return tx;
 }
@@ -2446,11 +2424,50 @@ uint64_t BlockchainBDB::get_num_outputs(const uint64_t& amount) const
     return num_elems;
 }
 
-output_data_t BlockchainBDB::get_output_key(const uint64_t& global_index) const
+output_data_t BlockchainBDB::get_output_key(const uint64_t& amount, const uint64_t& index, bool include_commitmemt) const
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
 
+      /**
+    * LMDB has transaction read only processing
+    * which probably have some differenc in BDB
+    * It also has renew cursor for effeciency.
+    *
+    * Look into implementing it here after migration.
+    **/
+
+    bdb_cur curOutputAmounts(DB_DEFAULT_TX, m_output_amounts);
+
+    Dbt_copy<uint64_t> k(amount);
+    Dbt_copy<uint64_t> v(index);
+    auto result = curOutputAmounts->get(&k, &v, DB_GET_BOTH);
+    if (result == DB_NOTFOUND)
+    {
+      throw1(OUTPUT_DNE(std::string("Attempting to get output pubkey by index, but key does not exist: amount " +
+                                    std::to_string(amount) + ", index " + std::to_string(index)).c_str()));
+    }
+    else if (result)
+    {
+      throw0(DB_ERROR("Error attempting to retrieve an output pubkey from the db"));
+    }
+
+    output_data_t outData;
+    if (amount == 0)
+    {
+      const auto *outKey = static_cast<const outkey *>(v.get_data());
+      outData = outKey->data;
+    }
+    else
+    {
+      const auto *preOutKey = static_cast<const pre_rct_outkey *>(v.get_data());
+      std::copy(&outData, &outData + 1, &preOutKey->data);
+      if (include_commitmemt)
+      {
+        outData.commitment = rct::zeroCommit(amount);
+      }
+    }
+#if 0
     Dbt_copy<uint32_t> k(global_index);
     Dbt_copy<output_data_t> v;
     auto get_result = m_output_keys->get(DB_DEFAULT_TX, &k, &v, 0);
@@ -2458,17 +2475,67 @@ output_data_t BlockchainBDB::get_output_key(const uint64_t& global_index) const
         throw1(OUTPUT_DNE("Attempting to get output pubkey by global index, but key does not exist"));
     else if (get_result)
         throw0(DB_ERROR("Error attempting to retrieve an output pubkey from the db"));
-
-    return v;
+#endif
+    return outData;
 }
 
-output_data_t BlockchainBDB::get_output_key(const uint64_t& amount, const uint64_t& index) const
+void BlockchainBDB::get_output_key(const epee::span<const uint64_t> &amounts, const std::vector<uint64_t> &offsets,
+                                  std::vector<output_data_t> &outputs, bool allow_partial) const
 {
     LOG_PRINT_L3("BlockchainBDB::" << __func__);
     check_open();
+    outputs.clear();
+    outputs.reserve(offsets.size());
 
+      /**
+       * LMDB has transaction read only processing
+       * which probably have some differenc in BDB
+       * It also has renew cursor for effeciency.
+       *
+       * Look into implementing it here after migration.
+       *
+       * In lmdb it also has time mesasurements
+    **/
+    bdb_cur curOutputAmounts(DB_DEFAULT_TX, m_output_amounts);
+    for (size_t i = 0; i < offsets.size(); ++i)
+    {
+      const auto amount = amounts.size() == 1 ? amounts[0] : amounts[i];
+      Dbt_copy<uint64_t> k(amount);
+      Dbt_copy<uint64_t> v(offsets[i]);
+
+      auto getResult = curOutputAmounts->get(&k, &v, DB_GET_BOTH);
+      if (getResult == DB_NOTFOUND)
+      {
+        if (allow_partial)
+        {
+          MDEBUG("Partial result: " << outputs.size() << "/" << offsets.size());
+          break;
+        }
+        throw1(OUTPUT_DNE((std::string("Attempting to get output pubkey by global index (amount ") + boost::lexical_cast<std::string>(amount) + ", index " + boost::lexical_cast<std::string>(offsets[i]) + ", count " + boost::lexical_cast<std::string>(get_num_outputs(amount)) + "), but key does not exist (current height " + boost::lexical_cast<std::string>(height()) + ")").c_str()));
+      }
+      else if(getResult)
+      {
+        throw0(DB_ERROR(std::string("Error attempting to retrieve an output pubkey from the db", getResult).c_str()));
+      }
+
+      if (amount == 0)
+      {
+        auto *outputKey = static_cast<const outkey *>(v.get_data());
+        outputs.emplace_back(outputKey->data);
+      }
+      else
+      {
+        const auto *preRCTOutKey = static_cast<const pre_rct_outkey *>(v.get_data());
+        outputs.resize(outputs.size() + 1);
+        auto &data = outputs.back();
+        std::copy(&data, &data + 1, &preRCTOutKey->data);
+        data.commitment = rct::zeroCommit(amount);
+      }
+    }
+#if 0
     uint64_t glob_index = get_output_global_index(amount, index);
     return get_output_key(glob_index);
+#endif
 }
 
 tx_out_index BlockchainBDB::get_output_tx_and_index(const uint64_t& amount, const uint64_t& index) const

@@ -313,6 +313,9 @@ public:
 
   uint64_t get_tx_count() const override;
 
+  transaction get_tx(const crypto::hash &h) const override;
+  bool get_tx(const crypto::hash &h, transaction &tx) const override;
+
   std::vector<transaction> get_tx_list(const std::vector<crypto::hash>& hlist) const override ;
 
   uint64_t get_tx_block_height(const crypto::hash& h) const override;
