@@ -287,10 +287,11 @@ namespace nodetool
 
       bs_head.push_back(vl);
     }
-
     if (anonymize)
     {
-      std::random_shuffle(bs_head.begin(), bs_head.end());
+      std::random_device rng;
+      std::mt19937 gen(rng());
+      std::shuffle(bs_head.begin(), bs_head.end(), gen);
       if (bs_head.size() > depth)
         bs_head.resize(depth);
       for (auto &e: bs_head)

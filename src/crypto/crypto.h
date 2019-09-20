@@ -109,8 +109,8 @@ namespace crypto {
 
     static rand_key generate_keys(public_key &pub, secret_key &sec, const rand_key& recovery_key = rand_key(), bool recover = false);
     friend rand_key generate_keys(public_key &pub, secret_key &sec, const rand_key& recovery_key, bool recover);
-    static bool check_key(const public_key &);
-    friend bool check_key(const public_key &);
+    static bool check_derived_public_key(const derived_public_key &key);
+    friend bool check_derived_public_key(const derived_public_key &key);
     static bool secret_key_to_public_key(const secret_key &, public_key &);
     friend bool secret_key_to_public_key(const secret_key &, public_key &);
     static bool generate_key_derivation(const public_key &, const secret_key &,
@@ -209,8 +209,8 @@ namespace crypto {
 
   /* Check a public key. Returns true if it is valid, false otherwise.
    */
-  inline bool check_key(const public_key &key) {
-    return crypto_ops::check_key(key);
+  inline bool check_derived_public_key(const derived_public_key &key) {
+    return crypto_ops::check_derived_public_key(key);
   }
 
   /* Checks a private key and computes the corresponding public key.

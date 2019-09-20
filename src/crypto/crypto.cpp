@@ -146,8 +146,11 @@ namespace crypto {
     return rng;
   }
 
-  bool crypto_ops::check_key(const public_key &key) {
-    return derived_public_key_public_check((uint8_t *)&key) == 1;
+  bool crypto_ops::check_derived_public_key(const derived_public_key &key) {
+    std::array<uint8_t, SIZE_DPK> deriverdPK {};
+
+    memcpy(&deriverdPK, &key, deriverdPK.size());
+    return derived_public_key_public_check(deriverdPK.data()) == 1;
   }
 
   bool crypto_ops::secret_key_to_public_key(const secret_key &sec, public_key &pub) {
