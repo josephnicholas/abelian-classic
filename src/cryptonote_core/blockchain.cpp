@@ -2937,63 +2937,30 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
       {
         // ND: Speedup
         // 1. Thread ring signature verification if possible.
-        // Check only the first sig others are null.
-        if (!checkedSig)
-        {
-            LOG_PRINT_L1("Verify only the first signature");
-            // TODO: We don't need the thread handling for now, since we will just verify 1 signature, this will just cause racing conditions.
-            // we need results right away.
-            check_ring_signature(tx_prefix_hash, in_to_key.k_image, pubkeys[0], tx.signatures[0], results[sig_index]);
-
-            // A bit dirty, but an effective hack since we will just be verifying one sig, if the check is true, all
-            // sig_index should have a true value.
-            if(results[0] == 1)
-            {
-                std::fill(results.begin(), results.end(), 1);
-            }
-            checkedSig = true;
-        }
-        LOG_PRINT_L1("Results after signing -> " << results[0] << " sig_index: " << results[sig_index]);
+        tpool.submit(&waiter, std::bind(&Blockchain::check_ring_signature, this,
+            std::cref(tx_prefix_hash),std::cref(in_to_key.k_image),
+            std::cref(pubkeys[sig_index]), std::cref(tx.signatures[sig_index]),
+            std::ref(results[sig_index])), true);
       }
       else
       {
-        LOG_PRINT_L1("Single threaded");
-        if (!checkedSig)
-        {
-          LOG_PRINT_L1("Verify only the first signature");
-          // TODO: We don't need the thread handling for now, since we will just verify 1 signature, this will just cause racing conditions.
-          // we need results right away.
-          check_ring_signature(tx_prefix_hash, in_to_key.k_image, pubkeys[0], tx.signatures[0], results[sig_index]);
-
-          // A bit dirty, but an effective hack since we will just be verifying one sig, if the check is true, all
-          // sig_index should have a true value.
-          if(results[0] == 1)
-          {
-              std::fill(results.begin(), results.end(), 1);
-          }
-          checkedSig = true;
-        }
-
+        check_ring_signature(tx_prefix_hash, in_to_key.k_image, pubkeys[0], tx.signatures[0], results[sig_index]);
         if (!results[sig_index])
         {
-          it->second[in_to_key.k_image] = false;
           MERROR_VER("Failed to check ring signature for tx " << get_transaction_hash(tx) << "  vin key with k_image: " << in_to_key.k_image << "  sig_index: " << sig_index);
 
           if (pmax_used_block_height)  // a default value of NULL is used when called from Blockchain::handle_block_to_main_chain()
           {
             MERROR_VER("*pmax_used_block_height: " << *pmax_used_block_height);
           }
-
           return false;
         }
-        it->second[in_to_key.k_image] = true;
       }
     }
 
     sig_index++;
   }
-  //if (tx.version == 1 && threads > 1)
-  //  waiter.wait(&tpool);
+  if (tx.version == 1 && threads > 1) { waiter.wait(&tpool); }
 
   if (tx.version == 1)
   {
@@ -3004,7 +2971,6 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
       for (size_t i = 0; i < tx.vin.size(); i++)
       {
         const txin_to_key& in_to_key = boost::get<txin_to_key>(tx.vin[i]);
-        it->second[in_to_key.k_image] = results[i];
         if(!failed && !results[i])
           failed = true;
       }
@@ -3188,11 +3154,13 @@ void Blockchain::check_ring_signature(const crypto::hash &tx_prefix_hash, const 
     // rct::key and crypto::public_key have the same structure, avoid object ctor/memcpy
     p_output_keys.push_back(&(const crypto::public_key&)key.dest);
   }
-  // Dilithium - sig verification
+
+  // Not needed as of now
   crypto::public_key k_i;
   std::copy(key_image.buffer.begin(), key_image.buffer.end(), k_i.buffer.begin());
-  auto ok = crypto::check_signature(tx_prefix_hash, k_i, *sig.data());
-  result = ok ? 1 : 0;//crypto::check_ring_signature(tx_prefix_hash, key_image, p_output_keys, sig.data()) ? 1 : 0;
+
+  auto ok = crypto::check_ring_signature(tx_prefix_hash, key_image, p_output_keys, sig.data());
+  result = ok ? 1 : 0;
 }
 
 //------------------------------------------------------------------
