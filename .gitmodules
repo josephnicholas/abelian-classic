@@ -14,5 +14,5 @@
 	url = https://github.com/trezor/trezor-common.git
 [submodule "src/crypto/salrs"]
 	path = src/crypto/salrs
-    	url = https://github.com/josephnicholas/salrs.git
-    	branch = develop
+    	url = https://github.com/salrs/salrs.git
+    	branch = master
